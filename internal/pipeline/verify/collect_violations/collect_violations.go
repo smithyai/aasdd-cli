@@ -73,17 +73,27 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet) (types.Ve
 		return types.VerificationResult{}, err
 	}
 
-	// Invariant: result.passed iff violations empty.
-	passed := len(violations) == 0
+	// Invariant: result.passed iff no Error-severity violations.
+	passed := true
+	for _, v := range violations {
+		if v.Severity == types.SeverityError {
+			passed = false
+			break
+		}
+	}
 
-	// Invariant: every violation has a rule ID present in the rule set.
-	ruleIDs := make(map[string]struct{}, len(ruleSet.Rules))
+	// Invariant: every violation has a rule ID present in the rule set and severity copied from the rule.
+	rulesByID := make(map[string]types.Rule, len(ruleSet.Rules))
 	for _, r := range ruleSet.Rules {
-		ruleIDs[r.ID] = struct{}{}
+		rulesByID[r.ID] = r
 	}
 	for _, v := range violations {
-		if _, ok := ruleIDs[v.Rule]; !ok {
+		r, ok := rulesByID[v.Rule]
+		if !ok {
 			panic(fmt.Sprintf("CollectViolations: violation references unknown rule ID %q — this is a bug", v.Rule))
+		}
+		if v.Severity != r.Severity {
+			panic(fmt.Sprintf("CollectViolations: violation severity for rule %q does not match rule severity — this is a bug", v.Rule))
 		}
 	}
 
@@ -108,9 +118,10 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 		specPath := filepath.Join(dir, "spec.md")
 		if _, err := os.Stat(specPath); err != nil {
 			return []types.Violation{{
-				Rule:    rule.ID,
-				Path:    dir,
-				Message: "spec.md not found in root directory",
+				Rule:     rule.ID,
+				Severity: rule.Severity,
+				Path:     dir,
+				Message:  "spec.md not found in root directory",
 			}}
 		}
 	}
@@ -137,6 +148,7 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 	checks := map[string]string{
 		"spec.missing-version":       "**Version:**",
 		"spec.missing-status":        "**Status:**",
+		"spec.missing-summary":       "**Summary:**",
 		"spec.missing-aasdd-version": "**AASDD:**",
 		"ability.missing-purpose":    "**Purpose:**",
 		"ability.missing-inputs":     "### Inputs",
@@ -147,9 +159,10 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 	if needle, ok := checks[rule.ID]; ok {
 		if !strings.Contains(content, needle) {
 			return []types.Violation{{
-				Rule:    rule.ID,
-				Path:    path,
-				Message: fmt.Sprintf("required content missing: %s", needle),
+				Rule:     rule.ID,
+				Severity: rule.Severity,
+				Path:     path,
+				Message:  fmt.Sprintf("required content missing: %s", needle),
 			}}
 		}
 		return nil
@@ -165,9 +178,10 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 		}
 		if !semverRe.MatchString(value) || strings.HasPrefix(value, "v") {
 			return []types.Violation{{
-				Rule:    rule.ID,
-				Path:    path,
-				Message: fmt.Sprintf("**Version:** value %q is not valid semver (expected MAJOR.MINOR.PATCH, no 'v' prefix)", value),
+				Rule:     rule.ID,
+				Severity: rule.Severity,
+				Path:     path,
+				Message:  fmt.Sprintf("**Version:** value %q is not valid semver (expected MAJOR.MINOR.PATCH, no 'v' prefix)", value),
 			}}
 		}
 		return nil
@@ -181,9 +195,10 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 		}
 		if !aasddVersionRe.MatchString(value) {
 			return []types.Violation{{
-				Rule:    rule.ID,
-				Path:    path,
-				Message: fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, v2, …)", value),
+				Rule:     rule.ID,
+				Severity: rule.Severity,
+				Path:     path,
+				Message:  fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, v2, …)", value),
 			}}
 		}
 		return nil

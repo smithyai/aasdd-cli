@@ -17,7 +17,7 @@
 
 ### Invariants
 
-- `result.passed` is `true` if and only if `result.violations` contains no `Error`-severity violations.
+- `result.passed` is `true` if and only if `result.violations` is empty.
 - Every violation in `result.violations` references an existing path under `target`.
 
 ### Failure Modes

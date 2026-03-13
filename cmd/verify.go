@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/collect_violations"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/load_rule_set"
 	"github.com/smithyai/aasdd-cli/internal/types"
+	"github.com/spf13/cobra"
 )
 
 var verifySpecVersion string
@@ -41,15 +41,31 @@ var verifyCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if result.Passed {
+		if result.Passed && len(result.Violations) == 0 {
 			fmt.Println("ok — spec is conformant")
 			return nil
 		}
 
+		errors_count := 0
+		warnings_count := 0
 		for _, v := range result.Violations {
-			fmt.Printf("  %s  %s\n    %s\n", v.Rule, v.Path, v.Message)
+			label := "error"
+			if v.Severity == types.SeverityWarning {
+				label = "warning"
+				warnings_count++
+			} else {
+				errors_count++
+			}
+			fmt.Printf("  %s  %s  %s\n    %s\n", label, v.Rule, v.Path, v.Message)
 		}
-		fmt.Printf("\n%d violation(s) found\n", len(result.Violations))
+
+		if result.Passed {
+			// Only warnings — still conformant.
+			fmt.Printf("\nok — spec is conformant (%d warning(s))\n", warnings_count)
+			return nil
+		}
+
+		fmt.Printf("\n%d error(s), %d warning(s)\n", errors_count, warnings_count)
 		os.Exit(1)
 		return nil
 	},

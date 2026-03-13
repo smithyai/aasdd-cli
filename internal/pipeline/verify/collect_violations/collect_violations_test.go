@@ -12,11 +12,11 @@ import (
 
 func minimalRuleSet() types.RuleSet {
 	return types.RuleSet{
-		SpecVersion: types.SpecVersion{Value: "v0.1.0"},
+		SpecVersion: types.SpecVersion{Value: "v1"},
 		Rules: []types.Rule{
-			{ID: "directory.missing-spec", Description: "root must have spec.md", AppliesTo: "directory"},
-			{ID: "spec.missing-version", Description: "spec.md must declare **Version:**", AppliesTo: "spec.md"},
-			{ID: "ability.missing-purpose", Description: "ability.md must declare **Purpose:**", AppliesTo: "ability.md"},
+			{ID: "directory.missing-spec", Description: "root must have spec.md", AppliesTo: "directory", Severity: types.SeverityError},
+			{ID: "spec.missing-version", Description: "spec.md must declare **Version:**", AppliesTo: "spec.md", Severity: types.SeverityWarning},
+			{ID: "ability.missing-purpose", Description: "ability.md must declare **Purpose:**", AppliesTo: "ability.md", Severity: types.SeverityError},
 		},
 	}
 }
@@ -49,7 +49,8 @@ func TestCollectViolations_TargetNotFound(t *testing.T) {
 
 // --- Invariants ---
 
-func TestCollectViolations_PassedIffViolationsEmpty_Conformant(t *testing.T) {
+// TestCollectViolations_PassedIffNoErrors_Conformant — no violations at all.
+func TestCollectViolations_PassedIffNoErrors_Conformant(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n")
 
@@ -65,19 +66,38 @@ func TestCollectViolations_PassedIffViolationsEmpty_Conformant(t *testing.T) {
 	}
 }
 
-func TestCollectViolations_PassedIffViolationsEmpty_NonConformant(t *testing.T) {
+// TestCollectViolations_PassedIffNoErrors_WarningsOnly — warnings don't block passed.
+func TestCollectViolations_PassedIffNoErrors_WarningsOnly(t *testing.T) {
 	dir := t.TempDir()
+	// spec.md exists but is missing **Version:** (warning-severity rule in minimalRuleSet)
 	writeFile(t, filepath.Join(dir, "spec.md"), "no version here\n")
 
 	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.Passed {
-		t.Error("expected passed=false when violations exist")
+	if !result.Passed {
+		t.Errorf("expected passed=true when only warning violations exist")
 	}
 	if len(result.Violations) == 0 {
-		t.Error("expected at least one violation")
+		t.Errorf("expected warning violations to be present")
+	}
+}
+
+// TestCollectViolations_PassedIffNoErrors_ErrorViolation — error-severity violation blocks passed.
+func TestCollectViolations_PassedIffNoErrors_ErrorViolation(t *testing.T) {
+	dir := t.TempDir()
+	// No spec.md at all — directory.missing-spec fires with SeverityError
+
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Passed {
+		t.Error("expected passed=false when error-severity violations exist")
+	}
+	if len(result.Violations) == 0 {
+		t.Error("expected at least one error violation")
 	}
 }
 

@@ -111,6 +111,19 @@ func TestLoadRuleSet_ContainsAASDDVersionFormatRule(t *testing.T) {
 	t.Error("rule set must contain spec.invalid-aasdd-version")
 }
 
+func TestLoadRuleSet_ContainsSummaryRule(t *testing.T) {
+	rs, err := load_rule_set.LoadRuleSet(nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	for _, r := range rs.Rules {
+		if r.ID == "spec.missing-summary" {
+			return
+		}
+	}
+	t.Error("rule set must contain spec.missing-summary")
+}
+
 // --- Idempotency ---
 
 func TestLoadRuleSet_Idempotent(t *testing.T) {
