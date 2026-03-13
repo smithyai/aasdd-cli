@@ -1,11 +1,12 @@
 package live_test
 
 import (
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
-	"github.com/smithyai/aasdd-cli/internal/types"
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
+	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
 func TestVerify_OwnSpec(t *testing.T) {
