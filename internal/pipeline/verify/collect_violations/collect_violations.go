@@ -1,0 +1,193 @@
+// Package collect_violations implements the CollectViolations ability.
+package collect_violations
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/smithyai/aasdd-cli/internal/types"
+)
+
+// TargetNotFound is returned when the target directory does not exist or is not
+// a directory.
+type TargetNotFound struct {
+	Path string
+}
+
+func (e *TargetNotFound) Error() string {
+	return fmt.Sprintf("target not found: %q", e.Path)
+}
+
+// CollectViolations applies a rule set to a spec directory and returns all
+// violations found.
+func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet) (types.VerificationResult, error) {
+	info, err := os.Stat(target.Path)
+	if err != nil || !info.IsDir() {
+		return types.VerificationResult{}, &TargetNotFound{Path: target.Path}
+	}
+
+	// Separate directory-level rules from file rules.
+	var dirRules, fileRules []types.Rule
+	for _, r := range ruleSet.Rules {
+		if r.AppliesTo == "directory" {
+			dirRules = append(dirRules, r)
+		} else {
+			fileRules = append(fileRules, r)
+		}
+	}
+
+	var violations []types.Violation
+
+	// Evaluate directory-level rules against the root.
+	for _, r := range dirRules {
+		vs := evaluateDirectoryRule(r, target.Path)
+		violations = append(violations, vs...)
+	}
+
+	// Walk the tree and evaluate file rules against every matching filename.
+	err = filepath.WalkDir(target.Path, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		name := filepath.Base(path)
+		for _, r := range fileRules {
+			if name != r.AppliesTo {
+				continue
+			}
+			content, readErr := os.ReadFile(path)
+			if readErr != nil {
+				return readErr
+			}
+			vs := evaluateFileRule(r, path, string(content))
+			violations = append(violations, vs...)
+		}
+		return nil
+	})
+	if err != nil {
+		return types.VerificationResult{}, err
+	}
+
+	// Invariant: result.passed iff violations empty.
+	passed := len(violations) == 0
+
+	// Invariant: every violation has a rule ID present in the rule set.
+	ruleIDs := make(map[string]struct{}, len(ruleSet.Rules))
+	for _, r := range ruleSet.Rules {
+		ruleIDs[r.ID] = struct{}{}
+	}
+	for _, v := range violations {
+		if _, ok := ruleIDs[v.Rule]; !ok {
+			panic(fmt.Sprintf("CollectViolations: violation references unknown rule ID %q — this is a bug", v.Rule))
+		}
+	}
+
+	// Invariant: every violation references an existing path under target.
+	for _, v := range violations {
+		if _, statErr := os.Stat(v.Path); statErr != nil {
+			panic(fmt.Sprintf("CollectViolations: violation path %q does not exist — this is a bug", v.Path))
+		}
+	}
+
+	return types.VerificationResult{
+		Target:     target,
+		Violations: violations,
+		Passed:     passed,
+	}, nil
+}
+
+// evaluateDirectoryRule checks directory-level rules.
+func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
+	switch rule.ID {
+	case "directory.missing-spec":
+		specPath := filepath.Join(dir, "spec.md")
+		if _, err := os.Stat(specPath); err != nil {
+			return []types.Violation{{
+				Rule:    rule.ID,
+				Path:    dir,
+				Message: "spec.md not found in root directory",
+			}}
+		}
+	}
+	return nil
+}
+
+// semverRe matches a valid semver string with no v prefix: MAJOR.MINOR.PATCH
+// with optional pre-release and build metadata.
+var semverRe = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
+	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
+
+// versionLineRe extracts the value after **Version:**
+var versionLineRe = regexp.MustCompile(`(?m)^\*\*Version:\*\*\s*(\S+)`)
+
+// aasddVersionLineRe extracts the value after **AASDD:**
+var aasddVersionLineRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*\s*(\S+)`)
+
+// aasddVersionRe matches a valid AASDD version: v followed by a positive integer with no leading zeros.
+var aasddVersionRe = regexp.MustCompile(`^v[1-9][0-9]*$`)
+
+// evaluateFileRule checks content-based rules for a single file.
+func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
+	checks := map[string]string{
+		"spec.missing-version":       "**Version:**",
+		"spec.missing-status":        "**Status:**",
+		"spec.missing-aasdd-version": "**AASDD:**",
+		"ability.missing-purpose":    "**Purpose:**",
+		"ability.missing-inputs":     "### Inputs",
+		"ability.missing-outputs":    "### Outputs",
+		"concept.missing-type":       "### ",
+	}
+
+	if needle, ok := checks[rule.ID]; ok {
+		if !strings.Contains(content, needle) {
+			return []types.Violation{{
+				Rule:    rule.ID,
+				Path:    path,
+				Message: fmt.Sprintf("required content missing: %s", needle),
+			}}
+		}
+		return nil
+	}
+
+	if rule.ID == "spec.invalid-version-format" {
+		m := versionLineRe.FindStringSubmatch(content)
+		// If no value follows **Version:** at all, the presence rule covers the
+		// missing field; treat an empty/whitespace-only value as invalid format.
+		value := ""
+		if m != nil {
+			value = m[1]
+		}
+		if !semverRe.MatchString(value) || strings.HasPrefix(value, "v") {
+			return []types.Violation{{
+				Rule:    rule.ID,
+				Path:    path,
+				Message: fmt.Sprintf("**Version:** value %q is not valid semver (expected MAJOR.MINOR.PATCH, no 'v' prefix)", value),
+			}}
+		}
+		return nil
+	}
+
+	if rule.ID == "spec.invalid-aasdd-version" {
+		m := aasddVersionLineRe.FindStringSubmatch(content)
+		value := ""
+		if m != nil {
+			value = m[1]
+		}
+		if !aasddVersionRe.MatchString(value) {
+			return []types.Violation{{
+				Rule:    rule.ID,
+				Path:    path,
+				Message: fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, v2, …)", value),
+			}}
+		}
+		return nil
+	}
+
+	return nil
+}
