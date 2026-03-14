@@ -59,7 +59,7 @@ jobs:
         run: |
           pip install --quiet cloudsmith-cli
           find dist/ -name '*.deb' ! -name '*_armv6.deb' | xargs -I{} cloudsmith push deb smithyai/aasdd/any-distro/any-version {}
-          find dist/ -name '*.rpm' | xargs -I{} cloudsmith push rpm smithyai/aasdd/any-version {}
+          find dist/ -name '*.rpm' | xargs -I{} cloudsmith push rpm smithy-ai/aasdd/any-distro/any-version {}
           find dist/ -name '*.apk' | xargs -I{} cloudsmith push alpine smithyai/aasdd/edge/main {}
         env:
           CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
