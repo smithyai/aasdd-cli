@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Validate spec version
-        uses: smithyai/aasdd-release@v1
+        uses: smithyai/aasdd-release@v1.0.2
         with:
           spec-path: spec/spec.md
           enforce-tag-match: true
