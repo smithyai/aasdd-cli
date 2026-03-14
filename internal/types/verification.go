@@ -16,23 +16,27 @@ type Rule struct {
 	Severity    Severity
 }
 
-// RuleSet is the complete set of structural rules for a given AASDD spec version.
+// RuleSet is the complete set of structural rules for a given AASDD version.
 type RuleSet struct {
-	SpecVersion SpecVersion
-	Rules       []Rule
+	AASDDVersion string
+	Rules        []Rule
 }
 
 // Violation is a single rule failure found during verification.
 type Violation struct {
-	Rule     string // matches Rule.ID
-	Severity Severity
-	Path     string
-	Message  string
+	Rule        string // matches Rule.ID
+	Severity    Severity
+	Description string // copied from Rule.Description
+	Path        string
+	Message     string
 }
 
 // VerificationResult is the outcome of verifying a spec directory.
 type VerificationResult struct {
-	Target     SpecTarget
-	Violations []Violation
-	Passed     bool // true when there are no Error-severity violations
+	Target        SpecTarget
+	AASDDVersion  string // AASDD version used during verification
+	RuleCount     int    // number of rules evaluated
+	Violations    []Violation
+	Passed        bool     // true when there are no Error-severity violations
+	SpecFileNames []string // basenames of files that at least one rule applies to
 }

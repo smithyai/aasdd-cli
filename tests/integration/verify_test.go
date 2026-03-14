@@ -1,11 +1,12 @@
 package integration_test
 
 import (
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
-	"github.com/smithyai/aasdd-cli/internal/types"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
+	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
 func writeFile(t *testing.T, path, content string) {
@@ -38,6 +39,12 @@ func TestVerify_ConformantSpec(t *testing.T) {
 func TestVerify_WarningsOnly(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**Status:** Draft\n**Summary:** A test spec.\n")
+	if err := os.MkdirAll(filepath.Join(dir, "abilities"), 0o755); err != nil {
+		t.Fatalf("mkdir abilities: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "concepts"), 0o755); err != nil {
+		t.Fatalf("mkdir concepts: %v", err)
+	}
 	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

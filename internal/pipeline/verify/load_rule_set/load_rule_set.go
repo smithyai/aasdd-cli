@@ -7,19 +7,32 @@ import (
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
-// UnknownSpecVersion is returned when the requested spec version is not
+// UnknownAASDDVersion is returned when the requested AASDD version is not
 // recognised by the tool.
-type UnknownSpecVersion struct {
+type UnknownAASDDVersion struct {
 	Version string
 }
 
-func (e *UnknownSpecVersion) Error() string {
-	return fmt.Sprintf("unknown spec version: %q", e.Version)
+func (e *UnknownAASDDVersion) Error() string {
+	return fmt.Sprintf("unknown AASDD version: %q", e.Version)
 }
 
-const latestVersion = "v1"
+const LatestVersion = "v1"
 
-// rulesByVersion maps known AASDD spec versions to their structural rule sets.
+// VersionInfo describes a known AASDD methodology version.
+type VersionInfo struct {
+	Version string
+	Summary string
+}
+
+// KnownVersions returns all recognised AASDD versions in order, oldest first.
+func KnownVersions() []VersionInfo {
+	return []VersionInfo{
+		{Version: "v1", Summary: "Initial release — structural rules for spec.md, ability.md, concept.md, scenario.md, and decision.md."},
+	}
+}
+
+// rulesByVersion maps known AASDD versions to their structural rule sets.
 var rulesByVersion = map[string][]types.Rule{
 	"v1": {
 		{
@@ -27,6 +40,42 @@ var rulesByVersion = map[string][]types.Rule{
 			Description: "The root directory must contain a spec.md file.",
 			AppliesTo:   "directory",
 			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "directory.missing-abilities",
+			Description: "The root directory must contain an abilities/ subdirectory.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "directory.missing-concepts",
+			Description: "The root directory must contain a concepts/ subdirectory.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "abilities.empty",
+			Description: "abilities/ contains no ability subdirectories.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityWarning,
+		},
+		{
+			ID:          "ability.missing-ability-md",
+			Description: "Each ability directory must contain an ability.md file.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityWarning,
+		},
+		{
+			ID:          "concepts.empty",
+			Description: "concepts/ contains no concept domain subdirectories.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityWarning,
+		},
+		{
+			ID:          "concept.missing-concept-md",
+			Description: "Each concept domain directory must contain a concept.md file.",
+			AppliesTo:   "directory",
+			Severity:    types.SeverityWarning,
 		},
 		{
 			ID:          "spec.missing-version",
@@ -88,25 +137,49 @@ var rulesByVersion = map[string][]types.Rule{
 			AppliesTo:   "concept.md",
 			Severity:    types.SeverityError,
 		},
+		{
+			ID:          "scenario.missing-description",
+			Description: "scenario.md must declare **Description:** with a summary of the scenario.",
+			AppliesTo:   "scenario.md",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "scenario.missing-trace",
+			Description: "scenario.md must contain a blockquote (>) execution trace.",
+			AppliesTo:   "scenario.md",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "decision.missing-context",
+			Description: "decision.md must contain a ## Context section.",
+			AppliesTo:   "decision.md",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "decision.missing-requirement",
+			Description: "decision.md must contain a ## Requirement section.",
+			AppliesTo:   "decision.md",
+			Severity:    types.SeverityError,
+		},
+		{
+			ID:          "decision.missing-decision",
+			Description: "decision.md must contain a ## Decision section.",
+			AppliesTo:   "decision.md",
+			Severity:    types.SeverityError,
+		},
 	},
 }
 
-// LoadRuleSet derives the complete rule set for the given AASDD spec version.
-// When specVersion is nil, the latest known version is used.
-func LoadRuleSet(specVersion *types.SpecVersion) (types.RuleSet, error) {
-	resolved := latestVersion
-	if specVersion != nil {
-		resolved = specVersion.Value
-	}
-
-	rules, ok := rulesByVersion[resolved]
+// LoadRuleSet derives the complete rule set for the given AASDD version.
+func LoadRuleSet(aasddVersion string) (types.RuleSet, error) {
+	rules, ok := rulesByVersion[aasddVersion]
 	if !ok {
-		return types.RuleSet{}, &UnknownSpecVersion{Version: resolved}
+		return types.RuleSet{}, &UnknownAASDDVersion{Version: aasddVersion}
 	}
 
 	ruleSet := types.RuleSet{
-		SpecVersion: types.SpecVersion{Value: resolved},
-		Rules:       rules,
+		AASDDVersion: aasddVersion,
+		Rules:        rules,
 	}
 
 	// Invariant: rule_set.rules is non-empty.

@@ -1,6 +1,6 @@
 ## AASDD CLI
 
-**AASDD:** v1d
+**AASDD:** v1
 **Version:** 0.1.0
 **Status:** Draft
 **Summary:** A command-line tool for verifying and scaffolding AASDD specs.

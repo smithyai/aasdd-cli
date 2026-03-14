@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
+	"github.com/spf13/cobra"
 )
 
-var scaffoldSpecVersion string
+var scaffoldExample bool
+var scaffoldAASDDVersion string
 
 var scaffoldCmd = &cobra.Command{
 	Use:   "scaffold <path>",
@@ -19,23 +20,27 @@ var scaffoldCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := types.SpecTarget{Path: args[0]}
 
-		var sv *types.SpecVersion
-		if scaffoldSpecVersion != "" {
-			sv = &types.SpecVersion{Value: scaffoldSpecVersion}
+		version := scaffoldAASDDVersion
+
+		if Verbose {
+			fmt.Fprintf(os.Stderr, "scaffolding %s\n", target.Path)
 		}
 
-		result, err := scaffold.Scaffold(target, sv)
+		result, err := scaffold.Scaffold(target, version, scaffoldExample)
 		if err != nil {
 			var notEmpty *scaffold.TargetNotEmpty
-			var unknownVer *scaffold.UnknownSpecVersion
+			var isFile *scaffold.TargetIsFile
 			var writeErr *scaffold.WriteError
+			var unknownVer *scaffold.UnknownAASDDVersion
 			switch {
+			case errors.As(err, &isFile):
+				fmt.Fprintf(os.Stderr, "error: %s\n", isFile)
 			case errors.As(err, &notEmpty):
 				fmt.Fprintf(os.Stderr, "error: %s\n", notEmpty)
-			case errors.As(err, &unknownVer):
-				fmt.Fprintf(os.Stderr, "error: %s\n", unknownVer)
 			case errors.As(err, &writeErr):
 				fmt.Fprintf(os.Stderr, "error: %s\n", writeErr)
+			case errors.As(err, &unknownVer):
+				fmt.Fprintf(os.Stderr, "error: %s\n", unknownVer)
 			default:
 				fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			}
@@ -51,6 +56,7 @@ var scaffoldCmd = &cobra.Command{
 }
 
 func init() {
-	scaffoldCmd.Flags().StringVar(&scaffoldSpecVersion, "spec-version", "", "AASDD version to scaffold against (default: latest)")
 	rootCmd.AddCommand(scaffoldCmd)
+	scaffoldCmd.Flags().BoolVarP(&scaffoldExample, "example", "e", false, "populate with a worked example instead of empty stubs")
+	scaffoldCmd.Flags().StringVar(&scaffoldAASDDVersion, "aasdd-version", "", "AASDD version to scaffold for (default: latest; e.g. --aasdd-version v1)")
 }
