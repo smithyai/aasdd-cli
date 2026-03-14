@@ -47,7 +47,7 @@ func Export(source, outputPath string, w io.Writer) (types.TransferResult, error
 		return types.TransferResult{}, &SourceNotDirectory{Path: source}
 	}
 
-	exp, fileCount, err := loadSpec(source)
+	exp, fileCount, err := LoadSpec(source)
 	if err != nil {
 		return types.TransferResult{}, err
 	}
@@ -71,8 +71,8 @@ func Export(source, outputPath string, w io.Writer) (types.TransferResult, error
 	return types.TransferResult{FileCount: fileCount, OutputPath: outputPath}, nil
 }
 
-// loadSpec walks the source directory and returns a SpecExport plus a total file count.
-func loadSpec(source string) (types.SpecExport, int, error) {
+// LoadSpec walks the source directory and returns a SpecExport plus a total file count.
+func LoadSpec(source string) (types.SpecExport, int, error) {
 	exp := types.SpecExport{}
 	count := 0
 

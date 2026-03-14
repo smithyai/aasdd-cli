@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/smithyai/aasdd-cli/internal/pipeline/diff"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/export"
 	import_ "github.com/smithyai/aasdd-cli/internal/pipeline/import"
 	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
@@ -54,6 +55,18 @@ func TestScenario_ExportsImportsAndVerifies(t *testing.T) {
 		t.Errorf("imported spec not conformant: %v", vResult.Violations)
 	}
 
-	// TODO: Extend this test with Diff assertions once Diff is implemented,
-	// completing the exports-imports-verifies-and-diffs scenario.
+	// Diff the original against the import — should be structurally identical.
+	diffResult, err := diff.Diff(types.SpecTarget{Path: srcDir}, types.SpecTarget{Path: dstDir})
+	if err != nil {
+		t.Fatalf("diff: %v", err)
+	}
+	if diffResult.Changed {
+		t.Errorf("expected no structural differences, got %d entries:", len(diffResult.Entries))
+		for _, e := range diffResult.Entries {
+			t.Errorf("  %s %s %s", e.Kind, e.Construct, e.Path)
+		}
+	}
+	if len(diffResult.Entries) != 0 {
+		t.Errorf("expected empty entries, got %d", len(diffResult.Entries))
+	}
 }
