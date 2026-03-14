@@ -38,37 +38,37 @@ func (e *WriteError) Unwrap() error { return e.Err }
 
 // Export serializes a spec directory into a structured SpecExport written as JSON.
 // Output is written to w when outputPath is empty; otherwise to the file at outputPath.
-func Export(source, outputPath string, w io.Writer) (types.ExportResult, error) {
+func Export(source, outputPath string, w io.Writer) (types.TransferResult, error) {
 	info, err := os.Stat(source)
 	if err != nil {
-		return types.ExportResult{}, &SourceNotFound{Path: source}
+		return types.TransferResult{}, &SourceNotFound{Path: source}
 	}
 	if !info.IsDir() {
-		return types.ExportResult{}, &SourceNotDirectory{Path: source}
+		return types.TransferResult{}, &SourceNotDirectory{Path: source}
 	}
 
 	exp, fileCount, err := loadSpec(source)
 	if err != nil {
-		return types.ExportResult{}, err
+		return types.TransferResult{}, err
 	}
 
 	data, err := json.MarshalIndent(exp, "", "  ")
 	if err != nil {
-		return types.ExportResult{}, &WriteError{Path: outputPath, Err: err}
+		return types.TransferResult{}, &WriteError{Path: outputPath, Err: err}
 	}
 	data = append(data, '\n')
 
 	if outputPath == "" {
 		if _, writeErr := w.Write(data); writeErr != nil {
-			return types.ExportResult{}, &WriteError{Path: "-", Err: writeErr}
+			return types.TransferResult{}, &WriteError{Path: "-", Err: writeErr}
 		}
-		return types.ExportResult{FileCount: fileCount}, nil
+		return types.TransferResult{FileCount: fileCount}, nil
 	}
 
 	if writeErr := os.WriteFile(outputPath, data, 0o644); writeErr != nil {
-		return types.ExportResult{}, &WriteError{Path: outputPath, Err: writeErr}
+		return types.TransferResult{}, &WriteError{Path: outputPath, Err: writeErr}
 	}
-	return types.ExportResult{FileCount: fileCount, OutputPath: outputPath}, nil
+	return types.TransferResult{FileCount: fileCount, OutputPath: outputPath}, nil
 }
 
 // loadSpec walks the source directory and returns a SpecExport plus a total file count.

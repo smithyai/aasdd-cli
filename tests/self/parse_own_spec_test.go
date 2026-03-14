@@ -55,13 +55,15 @@ func TestExport_OwnSpec_RoundTrip(t *testing.T) {
 	}
 
 	// Verify key reconstructed files exist in the output directory
+	// TODO: Replace this hardcoded file list with a Diff check once Diff is implemented.
+	// Diff provides a complete structural equivalence check with no maintenance burden.
 	expectedFiles := []string{
 		"spec.md",
 		"abilities/verify/ability.md",
 		"abilities/verify/collect-violations/ability.md",
 		"scenarios/scaffolds-and-verifies/scenario.md",
 		"scenarios/scaffolds-example-and-verifies/scenario.md",
-		"scenarios/exports-imports-and-verifies/scenario.md",
+		"scenarios/exports-imports-verifies-and-diffs/scenario.md",
 		"concepts/verification/concept.md",
 		"decisions/invocation-channel/decision.md",
 	}

@@ -1,6 +1,6 @@
-## Export domain
+## Representation domain
 
-Types used by the `Export` and `Import` abilities.
+Structured types representing a parsed spec directory and the results of transfer operations.
 
 ### SpecExport
 
@@ -120,24 +120,13 @@ Structured content of a `decision.md` file.
 | `requirement` | text | Prose under `### Requirement`.                                |
 | `decision`    | text | Prose under `### Decision`.                                   |
 
-### ExportResult
+### TransferResult
 
-The outcome of an `Export` operation.
-
-#### Properties
-
-| Name          | Type    | Description                                                                  |
-| ------------- | ------- | ---------------------------------------------------------------------------- |
-| `file_count`  | integer | Number of spec files included in the export.                                 |
-| `output_path` | text    | Path where the export was written; empty when written to the output channel. |
-
-### ImportResult
-
-The outcome of an `Import` operation.
+The outcome of a transfer operation (export or import).
 
 #### Properties
 
-| Name          | Type    | Description                                        |
-| ------------- | ------- | -------------------------------------------------- |
-| `file_count`  | integer | Number of files written to the output directory.   |
-| `output_path` | text    | Path of the directory the files were written into. |
+| Name          | Type    | Description                                                                                          |
+| ------------- | ------- | ---------------------------------------------------------------------------------------------------- |
+| `file_count`  | integer | Number of spec files transferred.                                                                    |
+| `output_path` | text    | Path where the output was written; empty when an export writes to the output channel instead of disk. |

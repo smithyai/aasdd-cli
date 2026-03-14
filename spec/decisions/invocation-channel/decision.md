@@ -2,7 +2,7 @@
 
 ### Context
 
-All root-level abilities (`Verify`, `Scaffold`, `Export`, `Import`, `ListVersions`) accept inputs that must arrive from outside the tool, which requires choosing how callers invoke the tool and pass arguments.
+All root-level abilities (`Verify`, `Scaffold`, `Export`, `Import`, `ListVersions`, `Diff`, `Graph`) accept inputs that must arrive from outside the tool, which requires choosing how callers invoke the tool and pass arguments.
 
 ### Requirement
 
@@ -11,6 +11,10 @@ A mechanism for a caller to invoke the tool, supply a target path, and receive o
 ### Decision
 
 CLI — the tool is invoked as `aasdd <command> <path> [flags]`. The target path is a positional argument. Results are written to stdout in human-readable form; errors and diagnostics are written to stderr. Exit code signals success or failure.
+
+`Diff` takes two positional arguments (`aasdd diff <left> <right>`) instead of one.
+
+`Graph` accepts an optional `--format` / `-f` flag (`mermaid` or `dot`). Defaults to `mermaid`.
 
 The AASDD version is not supplied as a flag. For `verify`, it is read from the `**AASDD:**` label in `spec.md` (falling back to the latest version if absent). For `scaffold`, the latest version is always used unless `--aasdd-version` / `-v` overrides it.
 

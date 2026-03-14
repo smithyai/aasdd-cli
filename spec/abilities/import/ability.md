@@ -13,7 +13,7 @@
 
 | Name     | Type                                                          | Description                      |
 | -------- | ------------------------------------------------------------- | -------------------------------- |
-| `result` | [ImportResult](../../concepts/export/concept.md#importresult) | Summary of the import operation. |
+| `result` | [TransferResult](../../concepts/representation/concept.md#transferresult) | Summary of the import operation. |
 
 ### Invariants
 

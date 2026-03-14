@@ -48,75 +48,75 @@ func (e *WriteError) Error() string { return fmt.Sprintf("write error at %q: %v"
 func (e *WriteError) Unwrap() error { return e.Err }
 
 // Import reconstructs a spec directory on disk from a previously exported structured file.
-func Import(source, outputPath string) (types.ImportResult, error) {
+func Import(source, outputPath string) (types.TransferResult, error) {
 	info, err := os.Stat(source)
 	if err != nil {
-		return types.ImportResult{}, &SourceNotFound{Path: source}
+		return types.TransferResult{}, &SourceNotFound{Path: source}
 	}
 	if info.IsDir() {
-		return types.ImportResult{}, &SourceNotFile{Path: source}
+		return types.TransferResult{}, &SourceNotFile{Path: source}
 	}
 
 	if info, statErr := os.Stat(outputPath); statErr == nil {
 		if !info.IsDir() {
-			return types.ImportResult{}, &OutputNotEmpty{Path: outputPath}
+			return types.TransferResult{}, &OutputNotEmpty{Path: outputPath}
 		}
 		entries, readErr := os.ReadDir(outputPath)
 		if readErr != nil {
-			return types.ImportResult{}, &WriteError{Path: outputPath, Err: readErr}
+			return types.TransferResult{}, &WriteError{Path: outputPath, Err: readErr}
 		}
 		if len(entries) > 0 {
-			return types.ImportResult{}, &OutputNotEmpty{Path: outputPath}
+			return types.TransferResult{}, &OutputNotEmpty{Path: outputPath}
 		}
 	}
 
 	data, err := os.ReadFile(source)
 	if err != nil {
-		return types.ImportResult{}, &SourceNotFound{Path: source}
+		return types.TransferResult{}, &SourceNotFound{Path: source}
 	}
 
 	var exp types.SpecExport
 	if err := json.Unmarshal(data, &exp); err != nil {
-		return types.ImportResult{}, &ParseError{Err: err}
+		return types.TransferResult{}, &ParseError{Err: err}
 	}
 
 	fileCount := 0
 
 	if _, writeErr := writeMD(outputPath, "spec.md", renderSpecFile(exp.ParsedSpecFile)); writeErr != nil {
-		return types.ImportResult{}, writeErr
+		return types.TransferResult{}, writeErr
 	}
 	fileCount++
 
 	for _, ability := range exp.Abilities {
 		n, writeErr := writeAbility(outputPath, ability)
 		if writeErr != nil {
-			return types.ImportResult{}, writeErr
+			return types.TransferResult{}, writeErr
 		}
 		fileCount += n
 	}
 
 	for _, scenario := range exp.Scenarios {
 		if _, writeErr := writeMD(outputPath, scenario.Path, renderScenarioFile(scenario)); writeErr != nil {
-			return types.ImportResult{}, writeErr
+			return types.TransferResult{}, writeErr
 		}
 		fileCount++
 	}
 
 	for _, concept := range exp.Concepts {
 		if _, writeErr := writeMD(outputPath, concept.Path, renderConceptFile(concept)); writeErr != nil {
-			return types.ImportResult{}, writeErr
+			return types.TransferResult{}, writeErr
 		}
 		fileCount++
 	}
 
 	for _, decision := range exp.Decisions {
 		if _, writeErr := writeMD(outputPath, decision.Path, renderDecisionFile(decision)); writeErr != nil {
-			return types.ImportResult{}, writeErr
+			return types.TransferResult{}, writeErr
 		}
 		fileCount++
 	}
 
-	return types.ImportResult{FileCount: fileCount, OutputPath: outputPath}, nil
+	return types.TransferResult{FileCount: fileCount, OutputPath: outputPath}, nil
 }
 
 // writeAbility writes ability.md and recursively writes its sub-abilities.

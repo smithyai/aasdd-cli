@@ -13,9 +13,9 @@
 
 | Name     | Type                                                          | Description                      |
 | -------- | ------------------------------------------------------------- | -------------------------------- |
-| `result` | [ExportResult](../../concepts/export/concept.md#exportresult) | Summary of the export operation. |
+| `result` | [TransferResult](../../concepts/representation/concept.md#transferresult) | Summary of the export operation. |
 
-The data written to `output` (or the output channel) is a serialized [SpecExport](../../concepts/export/concept.md#specexport) — a structured, semantic representation of the spec directory. The serialization format is determined by the implementation — see `decisions/` for the rationale.
+The data written to `output` (or the output channel) is a serialized [SpecExport](../../concepts/representation/concept.md#specexport) — a structured, semantic representation of the spec directory. The serialization format is determined by the implementation — see `decisions/` for the rationale.
 
 ### Invariants
 

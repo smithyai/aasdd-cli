@@ -74,14 +74,8 @@ type ParsedDecision struct {
 	Decision    string `json:"decision,omitempty"`
 }
 
-// ExportResult is the outcome of an Export operation.
-type ExportResult struct {
+// TransferResult is the outcome of a transfer operation (export or import).
+type TransferResult struct {
 	FileCount  int    `json:"file_count"`
 	OutputPath string `json:"output_path,omitempty"`
-}
-
-// ImportResult is the outcome of an Import operation.
-type ImportResult struct {
-	FileCount  int    `json:"file_count"`
-	OutputPath string `json:"output_path"`
 }

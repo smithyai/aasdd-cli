@@ -2,7 +2,7 @@
 
 **AASDD:** v1
 **Version:** 0.1.0
-**Summary:** A command-line tool for verifying, scaffolding, exporting, and importing AASDD specs.
+**Summary:** A command-line tool for verifying, scaffolding, exporting, importing, diffing, and graphing AASDD specs.
 
 ### Invariants
 
