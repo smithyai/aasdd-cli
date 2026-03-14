@@ -48,7 +48,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: release --clean --skip=homebrew_casks,scoops,aurs
+          args: release --clean --skip=homebrew,scoop,aur
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -57,7 +57,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: publish --skip=scoops,aurs,dockers_v2,nfpms
+          args: publish --skip=scoop,aur,docker,nfpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -67,7 +67,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: publish --skip=homebrew_casks,aurs,dockers_v2,nfpms
+          args: publish --skip=homebrew,aur,docker,nfpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
@@ -77,7 +77,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: publish --skip=homebrew_casks,scoops,dockers_v2,nfpms
+          args: publish --skip=homebrew,scoop,docker,nfpm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
