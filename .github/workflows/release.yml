@@ -44,14 +44,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up AUR SSH key
-        run: |
-          echo "$AUR_SSH_KEY_CONTENT" > /tmp/aur_ssh_key
-          chmod 600 /tmp/aur_ssh_key
-          echo "AUR_SSH_KEY=/tmp/aur_ssh_key" >> $GITHUB_ENV
-        env:
-          AUR_SSH_KEY_CONTENT: ${{ secrets.AUR_SSH_KEY }}
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:

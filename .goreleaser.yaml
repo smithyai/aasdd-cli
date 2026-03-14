@@ -75,19 +75,6 @@ scoops:
     description: AASDD CLI — verify and scaffold AASDD specs
     license: MIT
 
-aurs:
-  - name: aasdd-bin
-    homepage: https://github.com/smithyai/aasdd-cli
-    description: AASDD CLI — verify and scaffold AASDD specs
-    maintainers:
-      - smithyai <https://github.com/smithyai>
-    license: MIT
-    private_key: "{{ .Env.AUR_SSH_KEY }}"
-    git_url: ssh://aur@aur.archlinux.org/aasdd-bin.git
-    commit_author:
-      name: smithyai
-      email: matthew.downsc@gmail.com
-
 dockers_v2:
   - images:
       - ghcr.io/smithyai/aasdd-cli

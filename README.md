@@ -163,7 +163,7 @@ make release-test    # simulate the CI release workflow via act
 make clean       # remove build artifacts and locally built Docker images
 ```
 
-Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](.github/workflows/release.yml) handles all publishing — Homebrew, Scoop, AUR, deb/rpm/apk, and ghcr.io.
+Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](.github/workflows/release.yml) handles all publishing — Homebrew, Scoop, deb/rpm/apk, and ghcr.io.
 
 ### Releasing a new version
 
@@ -180,7 +180,7 @@ Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](
    - Build multi-arch Docker images and push to `ghcr.io/smithyai/aasdd-cli`
    - Package `.deb`, `.rpm`, and `.apk` files
    - Create a GitHub release with checksums and changelog
-   - Publish to Homebrew, Scoop, and AUR (when secrets are configured)
+   - Publish to Homebrew and Scoop (when secrets are configured)
 
 ### Required secrets
 
@@ -189,7 +189,6 @@ Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](
 | `GITHUB_TOKEN`       | Automatic — GitHub release and ghcr.io                                     |
 | `HOMEBREW_TAP_TOKEN` | Push to [smithyai/homebrew-tap](https://github.com/smithyai/homebrew-tap)  |
 | `SCOOP_BUCKET_TOKEN` | Push to [smithyai/scoop-bucket](https://github.com/smithyai/scoop-bucket)  |
-| `AUR_SSH_KEY`        | Push to AUR (`aasdd-bin`)                                                  |
 | `CLOUDSMITH_API_KEY` | Push deb/rpm/apk to [Cloudsmith](https://cloudsmith.io) (`smithyai/aasdd`) |
 
 Each publisher secret is optional — if a secret is missing or invalid, GoReleaser will report that publisher as failed but the GitHub release, binaries, and Docker images will still be created.
