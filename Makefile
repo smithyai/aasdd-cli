@@ -37,9 +37,8 @@ release-build: ## Build all artifacts locally incl. Docker images (requires gore
 	goreleaser release --snapshot --clean
 
 release-test: ## Simulate the CI workflow via act; skips Docker on Apple Silicon (use release-build for full Docker coverage)
-	act push \
+	act workflow_dispatch \
 		--secret-file .secrets \
-		--eventpath .act/push-tag.json \
 		--job release \
 		-W .github/workflows/release-local.yml \
 		$(ACT_FLAGS)

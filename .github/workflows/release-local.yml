@@ -6,9 +6,7 @@ name: Release (local)
 # GoReleaser runs in --snapshot mode so nothing is published.
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
