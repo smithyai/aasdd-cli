@@ -3,7 +3,6 @@ package collect_violations
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -46,9 +45,9 @@ func (e *ReadError) Error() string {
 func (e *ReadError) Unwrap() error { return e.Err }
 
 // CollectViolations applies a rule set to a spec directory and returns all
-// violations found. When progress is non-nil, "ok  <relpath>" is written for
-// each validated path.
-func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress io.Writer) (types.VerificationResult, error) {
+// violations found. When progress is true, "ok  <relpath>" is written to
+// stderr for each validated path.
+func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress bool) (types.VerificationResult, error) {
 	info, err := os.Stat(target.Path)
 	if err != nil {
 		return types.VerificationResult{}, &TargetNotFound{Path: target.Path}
@@ -74,8 +73,8 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress 
 		vs := evaluateDirectoryRule(r, target.Path)
 		violations = append(violations, vs...)
 	}
-	if progress != nil {
-		fmt.Fprintf(progress, "ok  .\n")
+	if progress {
+		fmt.Fprintf(os.Stderr, "ok  .\n")
 	}
 
 	// Walk the tree and evaluate file rules against every matching filename.
@@ -100,9 +99,9 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress 
 			vs := evaluateFileRule(r, path, string(content))
 			violations = append(violations, vs...)
 		}
-		if matched && progress != nil {
+		if matched && progress {
 			rel, _ := filepath.Rel(target.Path, path)
-			fmt.Fprintf(progress, "ok  %s\n", rel)
+			fmt.Fprintf(os.Stderr, "ok  %s\n", rel)
 		}
 		return nil
 	})

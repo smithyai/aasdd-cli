@@ -1,8 +1,8 @@
-This repository uses **Ability-Anchored Spec-Driven Development (AASDD)**. Read the spec before making any changes — it is the source of truth. The full methodology is at [ability-anchored-spec-driven-development](https://github.com/smithyai/ability-anchored-spec-driven-development).
+This repository uses **Ability-Anchored Spec-Driven Development (AASDD)**. Read the spec before making any changes — it is the source of truth. The full methodology is at [aasdd](https://github.com/smithyai/aasdd).
 
 ## The spec
 
-The spec structure, anatomy, and authoring rules are defined in [METHODOLOGY.md](https://github.com/smithyai/ability-anchored-spec-driven-development/blob/main/METHODOLOGY.md). Before implementing any ability, read its `ability.md` and every `concept.md` file it references. If a `decisions/` folder exists, read it before starting any implementation.
+The spec structure, anatomy, and authoring rules are defined in [METHODOLOGY.md](https://github.com/smithyai/aasdd/blob/main/METHODOLOGY.md). Before implementing any ability, read its `ability.md` and every `concept.md` file it references. If a `decisions/` folder exists, read it before starting any implementation.
 
 If the spec is **Draft**, the contract may shift. Do not make irreversible implementation decisions against a Draft ability unless you accept that risk. A **Stable** spec has an established contract — implementation tracks the spec version.
 
@@ -19,7 +19,7 @@ Concept names are canonical. Never rename a type or ability in the implementatio
 
 ## Implementation
 
-Follow [IMPLEMENTATION.md](https://github.com/smithyai/ability-anchored-spec-driven-development/blob/main/IMPLEMENTATION.md) for ordering rules, testing obligations, and the development cycle.
+Follow [IMPLEMENTATION.md](https://github.com/smithyai/aasdd/blob/main/IMPLEMENTATION.md) for ordering rules, testing obligations, and the development cycle.
 
 Key reminders:
 

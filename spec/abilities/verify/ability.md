@@ -2,14 +2,12 @@
 
 **Purpose:** Checks a spec directory for conformance with AASDD structural conventions and reports all violations.
 
-The AASDD version is read from the `**AASDD:**` label in `spec.md`. If the label is missing or unreadable, the latest version known to the tool is used.
-
 ### Inputs
 
-| Name       | Type                                                   | Description                                                              |
-| ---------- | ------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `target`   | [SpecTarget](../../concepts/cli/concept.md#spectarget) | The spec directory to verify.                                            |
-| `progress` | optional output writer                                 | When non-nil, passed through to `CollectViolations` for per-item output. |
+| Name       | Type                                                   | Description                                                             |
+| ---------- | ------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `target`   | [SpecTarget](../../concepts/cli/concept.md#spectarget) | The spec directory to verify.                                           |
+| `progress` | optional boolean                                       | When `true`, passed through to `CollectViolations` for per-item output. |
 
 ### Outputs
 
@@ -23,6 +21,7 @@ The AASDD version is read from the `**AASDD:**` label in `spec.md`. If the label
 - Every violation in `result.violations` references an existing path under `target`.
 - `result.aasdd_version` equals the AASDD version resolved during verification.
 - `result.rule_count` equals the number of rules in the rule set used during verification.
+- The AASDD version is read from the `**AASDD:**` label in `spec.md`. If the label is missing or unreadable, the latest version known to the tool is used.
 
 ### Failure Modes
 

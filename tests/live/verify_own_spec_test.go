@@ -16,7 +16,7 @@ func TestVerify_OwnSpec(t *testing.T) {
 	}
 	repoRoot := filepath.Join(filepath.Dir(file), "..", "..")
 	specDir := filepath.Join(repoRoot, "spec")
-	result, err := verify.Verify(types.SpecTarget{Path: specDir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: specDir}, false)
 	if err != nil {
 		t.Fatalf("verify returned error: %v", err)
 	}

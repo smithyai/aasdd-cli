@@ -24,7 +24,7 @@ func writeFile(t *testing.T, path, content string) {
 // --- Failure modes ---
 
 func TestVerify_TargetNotFound(t *testing.T) {
-	_, err := verify.Verify(types.SpecTarget{Path: "/nonexistent-verify-unit-xyz"}, nil)
+	_, err := verify.Verify(types.SpecTarget{Path: "/nonexistent-verify-unit-xyz"}, false)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -39,7 +39,7 @@ func TestVerify_TargetIsFile(t *testing.T) {
 	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	_, err := verify.Verify(types.SpecTarget{Path: f}, nil)
+	_, err := verify.Verify(types.SpecTarget{Path: f}, false)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
@@ -54,7 +54,7 @@ func TestVerify_TargetIsFile(t *testing.T) {
 func TestVerify_ResultAASDDVersionPopulated(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestVerify_ResultAASDDVersionPopulated(t *testing.T) {
 func TestVerify_ResultRuleCountPopulated(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestVerify_ResultTargetMatches(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
 	target := types.SpecTarget{Path: dir}
-	result, err := verify.Verify(target, nil)
+	result, err := verify.Verify(target, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestVerify_UnknownAASDDVersionInSpec_FallsBackToLatest(t *testing.T) {
 	dir := t.TempDir()
 	// spec.md declares an unknown AASDD version — Verify should silently fall back.
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v999\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("expected fallback to succeed, got error: %v", err)
 	}
@@ -107,7 +107,7 @@ func TestVerify_MissingAASDDLabelInSpec_UsesLatest(t *testing.T) {
 	dir := t.TempDir()
 	// spec.md has no **AASDD:** label — must fall back to latest.
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestVerify_MissingAASDDLabelInSpec_UsesLatest(t *testing.T) {
 func TestVerify_MissingSpecMd_UsesLatest(t *testing.T) {
 	dir := t.TempDir()
 	// No spec.md at all — readAASDDVersion should fall back gracefully.
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestVerify_MissingSpecMd_UsesLatest(t *testing.T) {
 func TestVerify_PassedIffNoErrorViolations_Conformant(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** Test.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -151,7 +151,7 @@ func TestVerify_PassedIffNoErrorViolations_Conformant(t *testing.T) {
 func TestVerify_AllViolationsReferenceExistingPaths(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "no version here\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -25,7 +25,7 @@ func TestScaffold_HappyPath(t *testing.T) {
 			t.Errorf("file %q does not exist: %v", f, statErr)
 		}
 	}
-	vResult, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	vResult, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("verify error: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestScaffold_Example_HappyPath(t *testing.T) {
 			t.Errorf("file %q does not exist: %v", f, statErr)
 		}
 	}
-	vResult, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	vResult, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("verify error: %v", err)
 	}

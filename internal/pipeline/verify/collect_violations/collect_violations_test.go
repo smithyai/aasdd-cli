@@ -2,6 +2,7 @@ package collect_violations_test
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,7 +39,7 @@ func TestCollectViolations_TargetNotFound(t *testing.T) {
 	_, err := collect_violations.CollectViolations(
 		types.SpecTarget{Path: "/nonexistent-path-xyz"},
 		minimalRuleSet(),
-		nil,
+		false,
 	)
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -57,7 +58,7 @@ func TestCollectViolations_TargetIsFile(t *testing.T) {
 	_, err := collect_violations.CollectViolations(
 		types.SpecTarget{Path: f},
 		minimalRuleSet(),
-		nil,
+		false,
 	)
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -83,7 +84,7 @@ func TestCollectViolations_ReadError(t *testing.T) {
 	_, err := collect_violations.CollectViolations(
 		types.SpecTarget{Path: dir},
 		minimalRuleSet(),
-		nil,
+		false,
 	)
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -101,7 +102,7 @@ func TestCollectViolations_PassedIffNoErrors_Conformant(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n")
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -119,7 +120,7 @@ func TestCollectViolations_PassedIffNoErrors_WarningsOnly(t *testing.T) {
 	// spec.md exists but is missing **Version:** (warning-severity rule in minimalRuleSet)
 	writeFile(t, filepath.Join(dir, "spec.md"), "no version here\n")
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -136,7 +137,7 @@ func TestCollectViolations_PassedIffNoErrors_ErrorViolation(t *testing.T) {
 	dir := t.TempDir()
 	// No spec.md at all — directory.missing-spec fires with SeverityError
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -158,7 +159,7 @@ func TestCollectViolations_AllViolationsReferenceValidRuleIDs(t *testing.T) {
 		ruleIDs[r.ID] = struct{}{}
 	}
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -173,7 +174,7 @@ func TestCollectViolations_AllViolationsReferenceExistingPaths(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "no version here\n")
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -190,7 +191,7 @@ func TestCollectViolations_EveryMatchingFileEvaluated(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "abilities", "foo", "ability.md"), "no purpose\n### Inputs\n### Outputs\n")
 	writeFile(t, filepath.Join(dir, "abilities", "bar", "ability.md"), "no purpose\n### Inputs\n### Outputs\n")
 
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -215,11 +216,11 @@ func TestCollectViolations_Idempotent(t *testing.T) {
 	target := types.SpecTarget{Path: dir}
 	rs := minimalRuleSet()
 
-	r1, err := collect_violations.CollectViolations(target, rs, nil)
+	r1, err := collect_violations.CollectViolations(target, rs, false)
 	if err != nil {
 		t.Fatalf("first call failed: %v", err)
 	}
-	r2, err := collect_violations.CollectViolations(target, rs, nil)
+	r2, err := collect_violations.CollectViolations(target, rs, false)
 	if err != nil {
 		t.Fatalf("second call failed: %v", err)
 	}
@@ -248,7 +249,7 @@ func TestCollectViolations_VersionFormat_Valid(t *testing.T) {
 		t.Run(ver, func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** "+ver+"\n")
-			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, versionFormatRuleSet(), nil)
+			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, versionFormatRuleSet(), false)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -265,7 +266,7 @@ func TestCollectViolations_VersionFormat_Invalid(t *testing.T) {
 		t.Run("invalid:"+ver, func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** "+ver+"\n")
-			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, versionFormatRuleSet(), nil)
+			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, versionFormatRuleSet(), false)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -291,7 +292,7 @@ func TestCollectViolations_AASDDVersion_Valid(t *testing.T) {
 		t.Run(ver, func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** "+ver+"\n")
-			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, aasddVersionRuleSet(), nil)
+			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, aasddVersionRuleSet(), false)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -308,7 +309,7 @@ func TestCollectViolations_AASDDVersion_Invalid(t *testing.T) {
 		t.Run("invalid:"+ver, func(t *testing.T) {
 			dir := t.TempDir()
 			writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** "+ver+"\n")
-			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, aasddVersionRuleSet(), nil)
+			result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, aasddVersionRuleSet(), false)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -325,7 +326,7 @@ func TestCollectViolations_AASDDVersionMatchesRuleSet(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
 	rs := minimalRuleSet()
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -338,7 +339,7 @@ func TestCollectViolations_RuleCountMatchesRuleSet(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
 	rs := minimalRuleSet()
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -351,7 +352,7 @@ func TestCollectViolations_ViolationSeverityCopiedFromRule(t *testing.T) {
 	dir := t.TempDir()
 	// No spec.md → directory.missing-spec fires (SeverityError in minimalRuleSet).
 	rs := minimalRuleSet()
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -374,7 +375,7 @@ func TestCollectViolations_ViolationSeverityCopiedFromRule(t *testing.T) {
 func TestCollectViolations_ViolationDescriptionCopiedFromRule(t *testing.T) {
 	dir := t.TempDir()
 	rs := minimalRuleSet()
-	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, nil)
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, rs, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -395,38 +396,59 @@ func TestCollectViolations_ViolationDescriptionCopiedFromRule(t *testing.T) {
 
 // --- Progress output ---
 
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	oldStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+	fn()
+	w.Close()
+	os.Stderr = oldStderr
+	out, _ := io.ReadAll(r)
+	return string(out)
+}
+
 func TestCollectViolations_Progress_RootMarker(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
-	var buf strings.Builder
-	_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), &buf)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(buf.String(), "ok  .") {
-		t.Errorf("expected progress to contain 'ok  .', got: %q", buf.String())
+	output := captureStderr(t, func() {
+		_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+	if !strings.Contains(output, "ok  .") {
+		t.Errorf("expected progress to contain 'ok  .', got: %q", output)
 	}
 }
 
 func TestCollectViolations_Progress_FileMarker(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
-	var buf strings.Builder
-	_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), &buf)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(buf.String(), "spec.md") {
-		t.Errorf("expected progress to contain 'spec.md', got: %q", buf.String())
+	output := captureStderr(t, func() {
+		_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), true)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+	if !strings.Contains(output, "spec.md") {
+		t.Errorf("expected progress to contain 'spec.md', got: %q", output)
 	}
 }
 
-func TestCollectViolations_Progress_NilWriterNoOutput(t *testing.T) {
+func TestCollectViolations_Progress_FalseNoOutput(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
-	// nil progress — should not panic.
-	_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), nil)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	output := captureStderr(t, func() {
+		_, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+	if output != "" {
+		t.Errorf("expected no stderr output when progress=false, got: %q", output)
 	}
 }

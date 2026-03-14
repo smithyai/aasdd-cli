@@ -2,7 +2,6 @@
 package verify
 
 import (
-	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -33,9 +32,8 @@ func readAASDDVersion(target types.SpecTarget) string {
 // conventions and reports all violations.
 //
 // The AASDD version is read from spec.md. If missing, the latest version is used.
-// When progress is non-nil, "ok  <path>" is written for each validated item.
-// Returns TargetNotFound on failure.
-func Verify(target types.SpecTarget, progress io.Writer) (types.VerificationResult, error) {
+// When progress is true, "ok  <path>" is written to stderr for each validated item.
+func Verify(target types.SpecTarget, progress bool) (types.VerificationResult, error) {
 	aasddVersion := readAASDDVersion(target)
 
 	ruleSet, err := load_rule_set.LoadRuleSet(aasddVersion)

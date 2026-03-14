@@ -19,15 +19,15 @@ func (e *UnknownAASDDVersion) Error() string {
 
 const LatestVersion = "v1"
 
-// VersionInfo describes a known AASDD methodology version.
-type VersionInfo struct {
+// VersionEntry describes a known AASDD methodology version.
+type VersionEntry struct {
 	Version string
 	Summary string
 }
 
 // KnownVersions returns all recognised AASDD versions in order, oldest first.
-func KnownVersions() []VersionInfo {
-	return []VersionInfo{
+func KnownVersions() []VersionEntry {
+	return []VersionEntry{
 		{Version: "v1", Summary: "Initial release — structural rules for spec.md, ability.md, concept.md, scenario.md, and decision.md."},
 	}
 }

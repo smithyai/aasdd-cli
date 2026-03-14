@@ -3,7 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 
 	"github.com/smithyai/aasdd-cli/internal/format"
@@ -20,12 +19,7 @@ var verifyCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := types.SpecTarget{Path: args[0]}
 
-		var progress io.Writer
-		if Progress {
-			progress = os.Stderr
-		}
-
-		result, err := verify.Verify(target, progress)
+		result, err := verify.Verify(target, Progress)
 		if err != nil {
 			var notFound *collect_violations.TargetNotFound
 			var isFile *collect_violations.TargetIsFile
@@ -45,9 +39,6 @@ var verifyCmd = &cobra.Command{
 
 		if Verbose {
 			fmt.Fprintf(os.Stderr, "AASDD %s (%d rules)\n", result.AASDDVersion, result.RuleCount)
-			fmt.Fprintln(os.Stdout)
-			format.WriteFileTree(os.Stdout, result)
-			fmt.Fprintln(os.Stdout)
 		}
 
 		if result.Passed && len(result.Violations) == 0 {

@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var versionsCmd = &cobra.Command{
-	Use:   "versions",
+var listVersionsCmd = &cobra.Command{
+	Use:   "list-versions",
 	Short: "List all AASDD methodology versions known to the tool",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -25,5 +25,5 @@ var versionsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(versionsCmd)
+	rootCmd.AddCommand(listVersionsCmd)
 }

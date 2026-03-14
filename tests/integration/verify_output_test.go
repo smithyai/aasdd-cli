@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +21,7 @@ func TestVerifyOutput_WarningLabelAppears(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "concepts"), 0o755); err != nil {
 		t.Fatalf("mkdir concepts: %v", err)
 	}
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -39,7 +40,7 @@ func TestVerifyOutput_WarningLabelAppears(t *testing.T) {
 
 func TestVerifyOutput_ErrorLabelAppears(t *testing.T) {
 	dir := t.TempDir()
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,14 +60,26 @@ func TestVerifyOutput_ProgressAndVerboseTogether(t *testing.T) {
 	// gives us both a progress line for the file and a verbose description on the violation.
 	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Status:** Draft\n**Summary:** A test spec.\n")
 
-	var progressBuf strings.Builder
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, &progressBuf)
+	// Capture stderr to verify progress output.
+	oldStderr := os.Stderr
+	r, w, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		t.Fatal(pipeErr)
+	}
+	os.Stderr = w
+
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, true)
+
+	w.Close()
+	os.Stderr = oldStderr
+	captured, _ := io.ReadAll(r)
+	progressOut := string(captured)
+
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// --progress: progress writer should have received at least one ok line.
-	progressOut := progressBuf.String()
+	// --progress: stderr should have received at least one ok line.
 	if !strings.Contains(progressOut, "ok") {
 		t.Errorf("expected progress output to contain 'ok', got:\n%s", progressOut)
 	}

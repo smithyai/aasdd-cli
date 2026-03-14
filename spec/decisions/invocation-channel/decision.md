@@ -2,7 +2,7 @@
 
 ### Context
 
-Both `Verify` and `Scaffold` accept a `SpecTarget` as their root-level input. That path must arrive from outside the tool, which requires choosing how callers invoke the tool and pass arguments.
+All root-level abilities (`Verify`, `Scaffold`, `Export`, `Import`, `ListVersions`) accept inputs that must arrive from outside the tool, which requires choosing how callers invoke the tool and pass arguments.
 
 ### Requirement
 
@@ -17,7 +17,7 @@ The AASDD version is not supplied as a flag. For `verify`, it is read from the `
 Two optional diagnostic flags are available:
 
 - `--progress` / `-p`: streams `ok  <path>` to stderr for each validated path as work happens — the root directory after directory-level rules, and each file matched by at least one file-level rule.
-- `--verbose` / `-v`: always prints `AASDD: <version> (<N> rules)` to stderr, and enriches each violation line with the rule's human-readable description.
-- `--aasdd-version` (scaffold only): the AASDD version to scaffold for (e.g. `--aasdd-version v1`). Defaults to the latest version known to the tool.
+- `--verbose`: always prints `AASDD: <version> (<N> rules)` to stderr, and enriches each violation line with the rule's human-readable description.
+- `--aasdd-version` / `-a` (scaffold only): the AASDD version to scaffold for (e.g. `--aasdd-version v1`). Defaults to the latest version known to the tool.
 
 `--version` / `-V` is available on the root command only. It prints the tool version derived from the Go module build info (e.g. `v0.1.0`), or `(devel)` for local untagged builds.

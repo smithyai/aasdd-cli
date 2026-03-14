@@ -4,11 +4,11 @@
 
 ### Inputs
 
-| Name       | Type                                                         | Description                                                                                                                                                                                          |
-| ---------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`   | [SpecTarget](../../../concepts/cli/concept.md#spectarget)    | The spec directory to evaluate.                                                                                                                                                                      |
-| `rule_set` | [RuleSet](../../../concepts/verification/concept.md#ruleset) | The rules to evaluate against the directory.                                                                                                                                                         |
-| `progress` | optional output writer                                       | When non-nil, `ok  <relpath>` is written for each validated item: `.` after directory-level rules, and the file's path relative to `target` after each file matched by at least one file-level rule. |
+| Name       | Type                                                         | Description                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `target`   | [SpecTarget](../../../concepts/cli/concept.md#spectarget)    | The spec directory to evaluate.                                                                                                                                                                                          |
+| `rule_set` | [RuleSet](../../../concepts/verification/concept.md#ruleset) | The rules to evaluate against the directory.                                                                                                                                                                             |
+| `progress` | optional boolean                                             | When `true`, `ok  <relpath>` is written to the error channel for each validated item: `.` after directory-level rules, and the file's path relative to `target` after each file matched by at least one file-level rule. |
 
 ### Outputs
 
@@ -29,7 +29,7 @@
 - `result.aasdd_version` equals `rule_set.aasdd_version`.
 - `result.rule_count` equals the number of rules in `rule_set.rules`.
 - `result.spec_file_names` contains exactly the set of `applies_to` values from file-level rules (rules where `applies_to` ≠ `"directory"`), deduplicated and sorted.
-- When `progress` is non-nil, exactly one `ok  .` line is written after directory-level rules, and exactly one `ok  <relpath>` line is written per file matched by at least one file-level rule.
+- When `progress` is `true`, exactly one `ok  .` line is written after directory-level rules, and exactly one `ok  <relpath>` line is written per file matched by at least one file-level rule.
 
 ### Failure Modes
 

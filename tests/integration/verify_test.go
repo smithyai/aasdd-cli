@@ -24,7 +24,7 @@ func TestVerify_ConformantSpec(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** A test spec.\n")
 	writeFile(t, filepath.Join(dir, "abilities", "do-thing", "ability.md"), "## DoThing\n\n**Purpose:** Does a thing.\n\n### Inputs\n\n### Outputs\n")
 	writeFile(t, filepath.Join(dir, "concepts", "thing", "concept.md"), "## Thing domain\n\n### Thing\n\nA thing.\n")
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -45,7 +45,7 @@ func TestVerify_WarningsOnly(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "concepts"), 0o755); err != nil {
 		t.Fatalf("mkdir concepts: %v", err)
 	}
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestVerify_WarningsOnly(t *testing.T) {
 
 func TestVerify_ErrorViolations(t *testing.T) {
 	dir := t.TempDir()
-	result, err := verify.Verify(types.SpecTarget{Path: dir}, nil)
+	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestVerify_ErrorViolations(t *testing.T) {
 }
 
 func TestVerify_TargetNotFound(t *testing.T) {
-	_, err := verify.Verify(types.SpecTarget{Path: "/nonexistent-xyz-integration"}, nil)
+	_, err := verify.Verify(types.SpecTarget{Path: "/nonexistent-xyz-integration"}, false)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
