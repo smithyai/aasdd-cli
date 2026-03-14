@@ -1,5 +1,11 @@
 # aasdd-cli
 
+[![Latest release](https://img.shields.io/github/v/release/smithyai/aasdd-cli)](https://github.com/smithyai/aasdd-cli/releases/latest)
+[![Release](https://github.com/smithyai/aasdd-cli/actions/workflows/release.yml/badge.svg)](https://github.com/smithyai/aasdd-cli/actions/workflows/release.yml)
+[![Go version](https://img.shields.io/github/go-mod/go-version/smithyai/aasdd-cli)](go.mod)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Packaging status](https://repology.org/badge/tiny-repos/aasdd.svg)](https://repology.org/project/aasdd/versions)
+
 The official CLI for [Ability-Anchored Spec-Driven Development (AASDD)](https://github.com/smithyai/aasdd).
 
 `aasdd` provides commands for verifying, scaffolding, exporting, importing, diffing, and graphing AASDD specs. It is also self-hosted: this repository's own spec lives in [`spec/`](spec/) and is verified against the tool on every commit.
