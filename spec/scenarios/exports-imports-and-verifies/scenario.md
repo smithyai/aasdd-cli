@@ -1,4 +1,4 @@
-## ExportImportRoundtrip
+## ExportsImportsAndVerifies
 
 **Description:** Exporting a spec directory and importing the result produces a directory that is structurally equivalent to the original.
 

@@ -1,4 +1,4 @@
-package live_test
+package self_test
 
 import (
 	"os"
@@ -60,7 +60,8 @@ func TestExport_OwnSpec_RoundTrip(t *testing.T) {
 		"abilities/verify/ability.md",
 		"abilities/verify/collect-violations/ability.md",
 		"scenarios/scaffolds-and-verifies/scenario.md",
-		"scenarios/export-import-roundtrip/scenario.md",
+		"scenarios/scaffolds-example-and-verifies/scenario.md",
+		"scenarios/exports-imports-and-verifies/scenario.md",
 		"concepts/verification/concept.md",
 		"decisions/invocation-channel/decision.md",
 	}

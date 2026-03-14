@@ -1,4 +1,4 @@
-package live_test
+package self_test
 
 import (
 	"path/filepath"
