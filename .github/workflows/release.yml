@@ -48,38 +48,11 @@ jobs:
         uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: release --clean --skip=homebrew,scoop,aur
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish to Homebrew tap
-        continue-on-error: true
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: publish --skip=scoop,aur,docker,nfpm
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-      - name: Publish to Scoop bucket
-        continue-on-error: true
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: publish --skip=homebrew,aur,docker,nfpm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
-
-      - name: Publish to AUR
-        continue-on-error: true
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: publish --skip=homebrew,scoop,docker,nfpm
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
 
       - name: Publish to Cloudsmith (apt/rpm/apk)

@@ -192,7 +192,7 @@ Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](
 | `AUR_SSH_KEY`        | Push to AUR (`aasdd-bin`)                                                  |
 | `CLOUDSMITH_API_KEY` | Push deb/rpm/apk to [Cloudsmith](https://cloudsmith.io) (`smithyai/aasdd`) |
 
-Each publisher runs with `continue-on-error: true` — a missing secret skips that publisher without failing the release.
+Each publisher secret is optional — if a secret is missing or invalid, GoReleaser will report that publisher as failed but the GitHub release, binaries, and Docker images will still be created.
 
 ## Methodology
 
