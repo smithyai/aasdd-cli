@@ -4,7 +4,7 @@ This repository uses **Ability-Anchored Spec-Driven Development (AASDD)**. Read 
 
 The spec structure, anatomy, and authoring rules are defined in [METHODOLOGY.md](https://github.com/smithyai/aasdd/blob/main/METHODOLOGY.md). Before implementing any ability, read its `ability.md` and every `concept.md` file it references. If a `decisions/` folder exists, read it before starting any implementation.
 
-If the spec is **Draft**, the contract may shift. Do not make irreversible implementation decisions against a Draft ability unless you accept that risk. A **Stable** spec has an established contract — implementation tracks the spec version.
+If the spec version is below `1.0.0`, the contract may shift. Do not make irreversible implementation decisions against it unless you accept that risk. At `1.0.0` and above the contract is established — implementation tracks the spec version.
 
 ## Translation rules
 

@@ -322,7 +322,6 @@ var aasddVersionRe = regexp.MustCompile(`^v[1-9][0-9]*$`)
 func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 	checks := map[string]string{
 		"spec.missing-version":         "**Version:**",
-		"spec.missing-status":          "**Status:**",
 		"spec.missing-summary":         "**Summary:**",
 		"spec.missing-aasdd-version":   "**AASDD:**",
 		"ability.missing-purpose":      "**Purpose:**",

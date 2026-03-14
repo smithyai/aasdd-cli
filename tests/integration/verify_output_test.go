@@ -14,7 +14,7 @@ import (
 
 func TestVerifyOutput_WarningLabelAppears(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**Status:** Draft\n**Summary:** A test spec.\n")
+	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**Summary:** A test spec.\n")
 	if err := os.MkdirAll(filepath.Join(dir, "abilities"), 0o755); err != nil {
 		t.Fatalf("mkdir abilities: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestVerifyOutput_ProgressAndVerboseTogether(t *testing.T) {
 	dir := t.TempDir()
 	// A spec.md that will produce a warning (missing **Version:**) —
 	// gives us both a progress line for the file and a verbose description on the violation.
-	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Status:** Draft\n**Summary:** A test spec.\n")
+	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Summary:** A test spec.\n")
 
 	// Capture stderr to verify progress output.
 	oldStderr := os.Stderr

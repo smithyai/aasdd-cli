@@ -84,12 +84,6 @@ var rulesByVersion = map[string][]types.Rule{
 			Severity:    types.SeverityWarning,
 		},
 		{
-			ID:          "spec.missing-status",
-			Description: "spec.md must declare **Status:**.",
-			AppliesTo:   "spec.md",
-			Severity:    types.SeverityWarning,
-		},
-		{
 			ID:          "spec.missing-summary",
 			Description: "spec.md must declare **Summary:** with a one-sentence description of the spec.",
 			AppliesTo:   "spec.md",

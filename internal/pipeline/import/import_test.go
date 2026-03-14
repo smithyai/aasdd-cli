@@ -19,7 +19,6 @@ func makeSnapshot(t *testing.T) string {
 			Heading:      "Test Spec",
 			AASDDVersion: "v1",
 			Version:      "0.1.0",
-			Status:       "Draft",
 			Summary:      "A test spec.",
 		},
 		Abilities: []types.ParsedAbility{

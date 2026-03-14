@@ -14,7 +14,6 @@ type ParsedSpecFile struct {
 	Heading      string   `json:"heading"`
 	AASDDVersion string   `json:"aasdd"`
 	Version      string   `json:"version"`
-	Status       string   `json:"status"`
 	Summary      string   `json:"summary"`
 	Invariants   []string `json:"invariants,omitempty"`
 }

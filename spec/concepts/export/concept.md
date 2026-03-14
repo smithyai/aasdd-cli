@@ -13,7 +13,6 @@ The top-level structured representation of a spec directory's semantic content. 
 | `heading`    | text                                      | (from `ParsedSpecFile`) Top-level heading.                     |
 | `aasdd`      | text                                      | (from `ParsedSpecFile`) The AASDD version.                     |
 | `version`    | text                                      | (from `ParsedSpecFile`) The spec version.                      |
-| `status`     | text                                      | (from `ParsedSpecFile`) The spec status.                       |
 | `summary`    | text                                      | (from `ParsedSpecFile`) The spec summary.                      |
 | `invariants` | list of text                              | (from `ParsedSpecFile`) Invariants from `spec.md`.             |
 | `abilities`  | list of [ParsedAbility](#parsedability)   | All top-level abilities found, each with nested sub-abilities. |
@@ -32,7 +31,6 @@ Structured content of a `spec.md` file.
 | `heading`    | text         | Top-level heading (the spec name).                |
 | `aasdd`      | text         | Value of the `**AASDD:**` label.                  |
 | `version`    | text         | Value of the `**Version:**` label.                |
-| `status`     | text         | Value of the `**Status:**` label.                 |
 | `summary`    | text         | Value of the `**Summary:**` label.                |
 | `invariants` | list of text | Bullet points under `### Invariants`, if present. |
 

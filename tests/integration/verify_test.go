@@ -21,7 +21,7 @@ func writeFile(t *testing.T, path, content string) {
 
 func TestVerify_ConformantSpec(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** A test spec.\n")
+	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** A test spec.\n")
 	writeFile(t, filepath.Join(dir, "abilities", "do-thing", "ability.md"), "## DoThing\n\n**Purpose:** Does a thing.\n\n### Inputs\n\n### Outputs\n")
 	writeFile(t, filepath.Join(dir, "concepts", "thing", "concept.md"), "## Thing domain\n\n### Thing\n\nA thing.\n")
 	result, err := verify.Verify(types.SpecTarget{Path: dir}, false)
@@ -38,7 +38,7 @@ func TestVerify_ConformantSpec(t *testing.T) {
 
 func TestVerify_WarningsOnly(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**Status:** Draft\n**Summary:** A test spec.\n")
+	writeFile(t, filepath.Join(dir, "spec.md"), "## My Spec\n\n**Summary:** A test spec.\n")
 	if err := os.MkdirAll(filepath.Join(dir, "abilities"), 0o755); err != nil {
 		t.Fatalf("mkdir abilities: %v", err)
 	}

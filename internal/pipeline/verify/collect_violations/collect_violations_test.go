@@ -100,7 +100,7 @@ func TestCollectViolations_ReadError(t *testing.T) {
 // TestCollectViolations_PassedIffNoErrors_Conformant — no violations at all.
 func TestCollectViolations_PassedIffNoErrors_Conformant(t *testing.T) {
 	dir := t.TempDir()
-	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n")
+	writeFile(t, filepath.Join(dir, "spec.md"), "**AASDD:** v1\n**Version:** 0.1.0\n")
 
 	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir}, minimalRuleSet(), false)
 	if err != nil {

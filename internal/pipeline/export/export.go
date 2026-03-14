@@ -199,8 +199,6 @@ func parseSpecFile(content string) types.ParsedSpecFile {
 			s.AASDDVersion = strings.TrimSpace(strings.TrimPrefix(line, "**AASDD:**"))
 		case strings.HasPrefix(line, "**Version:**"):
 			s.Version = strings.TrimSpace(strings.TrimPrefix(line, "**Version:**"))
-		case strings.HasPrefix(line, "**Status:**"):
-			s.Status = strings.TrimSpace(strings.TrimPrefix(line, "**Status:**"))
 		case strings.HasPrefix(line, "**Summary:**"):
 			s.Summary = strings.TrimSpace(strings.TrimPrefix(line, "**Summary:**"))
 		case line == "### Invariants":

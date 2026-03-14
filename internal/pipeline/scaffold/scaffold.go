@@ -64,11 +64,11 @@ var templatesByVersion = map[string][]scaffoldFile{
 	"v1": {
 		{
 			RelPath: "spec.md",
-			Content: "## <Name>\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** <One sentence describing what this spec covers.>\n",
+			Content: "## <Name>\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** <One sentence describing what this spec covers.>\n",
 		},
 		{
 			RelPath: "README.md",
-			Content: "# Spec\n\nThis directory contains the AASDD spec. See `spec.md` for top-level metadata, invariants, and status.\n",
+			Content: "# Spec\n\nThis directory contains the AASDD spec. See `spec.md` for top-level metadata and invariants.\n",
 		},
 		{
 			RelPath: filepath.Join("abilities", "README.md"),
@@ -95,11 +95,11 @@ var exampleTemplatesByVersion = map[string][]scaffoldFile{
 	"v1": {
 		{
 			RelPath: "spec.md",
-			Content: "## Greeter\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** A minimal service that produces a personalised greeting for a given name.\n",
+			Content: "## Greeter\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** A minimal service that produces a personalised greeting for a given name.\n",
 		},
 		{
 			RelPath: "README.md",
-			Content: "# Spec\n\nThis directory contains the AASDD spec. See `spec.md` for top-level metadata, invariants, and status.\n",
+			Content: "# Spec\n\nThis directory contains the AASDD spec. See `spec.md` for top-level metadata and invariants.\n",
 		},
 		{
 			RelPath: filepath.Join("abilities", "README.md"),

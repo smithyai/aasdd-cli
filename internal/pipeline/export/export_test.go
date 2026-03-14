@@ -29,7 +29,7 @@ func makeSpecDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "spec.md"),
-		"## My Spec\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Status:** Draft\n**Summary:** A test spec.\n")
+		"## My Spec\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** A test spec.\n")
 	writeFile(t, filepath.Join(dir, "abilities", "greet", "ability.md"),
 		"## Greet\n\n**Purpose:** Says hello.\n\n### Inputs\n\n| Name | Type | Description |\n| ---- | ---- | ----------- |\n| `name` | text | Recipient name. |\n")
 	writeFile(t, filepath.Join(dir, "concepts", "greeting", "concept.md"),

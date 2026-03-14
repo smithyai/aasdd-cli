@@ -157,7 +157,6 @@ func renderSpecFile(s types.ParsedSpecFile) string {
 	b.WriteString("\n")
 	b.WriteString("**AASDD:** " + s.AASDDVersion + "\n")
 	b.WriteString("**Version:** " + s.Version + "\n")
-	b.WriteString("**Status:** " + s.Status + "\n")
 	b.WriteString("**Summary:** " + s.Summary + "\n")
 	if len(s.Invariants) > 0 {
 		b.WriteString("\n### Invariants\n\n")
