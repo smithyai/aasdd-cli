@@ -1,0 +1,45 @@
+name: Release (local)
+
+# Used by `make release-test` for local act simulation only.
+# Mirrors release.yml but omits the spec validation step (requires a published
+# smithyai/aasdd-release tag) and the ghcr.io login (requires real credentials).
+# GoReleaser runs in --snapshot mode so nothing is published.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up QEMU
+        if: ${{ env.SKIP_DOCKER != 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: ${{ env.SKIP_DOCKER != 'true' }}
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --snapshot --clean ${{ env.SKIP_DOCKER == 'true' && '--skip=docker' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

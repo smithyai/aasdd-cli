@@ -7,6 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version and date are set via ldflags at build time by GoReleaser.
+var (
+	version = ""
+	date    = ""
+)
+
 // Progress controls whether commands stream ok <path> lines for each validated item.
 var Progress bool
 
@@ -16,28 +22,31 @@ var Verbose bool
 const repoURL = "https://github.com/smithyai/aasdd-cli"
 
 func buildVersionString() string {
-	version := "(devel)"
-	date := ""
+	v := version
+	d := date
 
-	if info, ok := debug.ReadBuildInfo(); ok {
-		if info.Main.Version != "" {
-			version = info.Main.Version
-		}
-		for _, s := range info.Settings {
-			if s.Key == "vcs.time" && len(s.Value) >= 10 {
-				date = s.Value[:10]
+	if v == "" {
+		v = "(devel)"
+		if info, ok := debug.ReadBuildInfo(); ok {
+			if info.Main.Version != "" {
+				v = info.Main.Version
+			}
+			for _, s := range info.Settings {
+				if s.Key == "vcs.time" && len(s.Value) >= 10 {
+					d = s.Value[:10]
+				}
 			}
 		}
 	}
 
-	line1 := "aasdd version " + version
-	if date != "" {
-		line1 += " (" + date + ")"
+	line1 := "aasdd version " + v
+	if d != "" {
+		line1 += " (" + d + ")"
 	}
 
 	url := repoURL
-	if version != "(devel)" {
-		url += "/releases/tag/" + version
+	if v != "(devel)" {
+		url += "/releases/tag/" + v
 	}
 
 	return line1 + "\n" + url + "\n"
