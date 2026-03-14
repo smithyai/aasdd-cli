@@ -83,7 +83,6 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
 
       - name: Publish to Cloudsmith (apt/rpm/apk)
-        if: ${{ secrets.CLOUDSMITH_API_KEY != '' }}
         continue-on-error: true
         run: |
           pip install --quiet cloudsmith-cli
