@@ -25,7 +25,17 @@ docker pull ghcr.io/smithyai/aasdd-cli:latest
 docker run --rm -v "$PWD:/work" ghcr.io/smithyai/aasdd-cli:latest verify /work/spec
 ```
 
-### apt / deb
+### apt (Debian / Ubuntu)
+
+```sh
+# Add the repository (one-time setup)
+curl -1sLf 'https://dl.cloudsmith.io/public/smithyai/aasdd/setup.deb.sh' | sudo -E bash
+
+# Install
+sudo apt install aasdd
+```
+
+Or install manually without adding the repository:
 
 ```sh
 curl -fsSL https://github.com/smithyai/aasdd-cli/releases/latest/download/aasdd_linux_amd64.deb -o aasdd.deb
@@ -110,12 +120,12 @@ aasdd graph ./spec
 aasdd graph ./spec -o graph.mmd
 ```
 
-### `versions`
+### `list-versions`
 
 List all AASDD methodology versions known to the tool.
 
 ```sh
-aasdd versions
+aasdd list-versions
 ```
 
 ## Usage in CI
@@ -154,6 +164,35 @@ make clean       # remove build artifacts and locally built Docker images
 ```
 
 Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](.github/workflows/release.yml) handles all publishing — Homebrew, Scoop, AUR, deb/rpm/apk, and ghcr.io.
+
+### Releasing a new version
+
+1. Update the version in [`spec/spec.md`](spec/spec.md) (`**Version:** X.Y.Z`)
+2. Commit and push to `main`
+3. Tag the commit and push the tag:
+   ```sh
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+4. The release workflow will:
+   - Validate the tag matches the spec version via [`smithyai/aasdd-release`](https://github.com/smithyai/aasdd-release)
+   - Build binaries for all platforms (linux, macOS, Windows × amd64, arm64, arm/v6, arm/v7, 386)
+   - Build multi-arch Docker images and push to `ghcr.io/smithyai/aasdd-cli`
+   - Package `.deb`, `.rpm`, and `.apk` files
+   - Create a GitHub release with checksums and changelog
+   - Publish to Homebrew, Scoop, and AUR (when secrets are configured)
+
+### Required secrets
+
+| Secret               | Purpose                                                                    |
+| -------------------- | -------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`       | Automatic — GitHub release and ghcr.io                                     |
+| `HOMEBREW_TAP_TOKEN` | Push to [smithyai/homebrew-tap](https://github.com/smithyai/homebrew-tap)  |
+| `SCOOP_BUCKET_TOKEN` | Push to [smithyai/scoop-bucket](https://github.com/smithyai/scoop-bucket)  |
+| `AUR_SSH_KEY`        | Push to AUR (`aasdd-bin`)                                                  |
+| `CLOUDSMITH_API_KEY` | Push deb/rpm/apk to [Cloudsmith](https://cloudsmith.io) (`smithyai/aasdd`) |
+
+Each publisher runs with `continue-on-error: true` — a missing secret skips that publisher without failing the release.
 
 ## Methodology
 
