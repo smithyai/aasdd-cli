@@ -1,6 +1,6 @@
 ## Verify
 
-**Purpose:** Checks a spec directory for conformance with AASDD structural conventions and reports all violations.
+Checks a spec directory for conformance with AASDD structural conventions and reports all violations.
 
 ### Inputs
 
@@ -31,7 +31,7 @@
 | `TargetIsFile`   | `target.path` is a file, not a directory. | Error written to stderr; exit code non-zero. |
 | `ReadError`      | A file under `target` cannot be read.     | Error written to stderr; exit code non-zero. |
 
-### Visualization
+### Decomposition
 
 ```mermaid
 graph TD

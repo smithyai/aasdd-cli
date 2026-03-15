@@ -81,6 +81,12 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 		count++
 	}
 
+	if data, readErr := os.ReadFile(filepath.Join(source, "state-machine.md")); readErr == nil {
+		sm := parseStateMachineFile(string(data))
+		exp.StateMachine = &sm
+		count++
+	}
+
 	abilitiesDir := filepath.Join(source, "abilities")
 	if entries, readErr := os.ReadDir(abilitiesDir); readErr == nil {
 		sortEntries(entries)
@@ -191,6 +197,7 @@ func sortEntries(entries []os.DirEntry) {
 func parseSpecFile(content string) types.ParsedSpecFile {
 	var s types.ParsedSpecFile
 	section := ""
+	pastMeta := false
 	for _, line := range strings.Split(content, "\n") {
 		switch {
 		case strings.HasPrefix(line, "## "):
@@ -199,15 +206,30 @@ func parseSpecFile(content string) types.ParsedSpecFile {
 			s.AASDDVersion = strings.TrimSpace(strings.TrimPrefix(line, "**AASDD:**"))
 		case strings.HasPrefix(line, "**Version:**"):
 			s.Version = strings.TrimSpace(strings.TrimPrefix(line, "**Version:**"))
-		case strings.HasPrefix(line, "**Summary:**"):
-			s.Summary = strings.TrimSpace(strings.TrimPrefix(line, "**Summary:**"))
+			pastMeta = true
 		case line == "### Invariants":
 			section = "invariants"
 		case strings.HasPrefix(line, "### "):
-			section = ""
+			section = strings.TrimPrefix(line, "### ")
 		case section == "invariants" && strings.HasPrefix(line, "- "):
 			s.Invariants = append(s.Invariants, strings.TrimPrefix(line, "- "))
+		case section != "" && section != "invariants":
+			if len(s.CustomSections) > 0 && s.CustomSections[len(s.CustomSections)-1].Heading == section {
+				s.CustomSections[len(s.CustomSections)-1].Content += "\n" + line
+			} else {
+				s.CustomSections = append(s.CustomSections, types.CustomSection{Heading: section, Content: line})
+			}
+		case pastMeta && section == "" && strings.TrimSpace(line) != "":
+			if s.Summary != "" {
+				s.Summary += "\n" + line
+			} else {
+				s.Summary = line
+			}
 		}
+	}
+	s.Summary = strings.TrimSpace(s.Summary)
+	for i := range s.CustomSections {
+		s.CustomSections[i].Content = strings.TrimSpace(s.CustomSections[i].Content)
 	}
 	return s
 }
@@ -247,17 +269,16 @@ func parseAbilityFile(content string) types.ParsedAbility {
 	for i, line := range preamble {
 		if strings.HasPrefix(line, "## ") {
 			a.Heading = strings.TrimPrefix(line, "## ")
-		} else if strings.HasPrefix(line, "**Purpose:**") {
-			purposeIdx = i
+			purposeIdx = i + 1
 		}
 	}
 	if purposeIdx >= 0 {
-		first := strings.TrimSpace(strings.TrimPrefix(preamble[purposeIdx], "**Purpose:**"))
 		var parts []string
-		if first != "" {
-			parts = append(parts, first)
+		for _, line := range preamble[purposeIdx:] {
+			if strings.TrimSpace(line) != "" {
+				parts = append(parts, line)
+			}
 		}
-		parts = append(parts, preamble[purposeIdx+1:]...)
 		a.Purpose = strings.TrimSpace(strings.Join(parts, "\n"))
 	}
 
@@ -272,10 +293,8 @@ func parseAbilityFile(content string) types.ParsedAbility {
 			a.Invariants = extractBullets(sec.lines)
 		case "Failure Modes":
 			a.FailureModes = parseTable(sec.lines)
-		case "Notes":
-			a.Notes = strings.TrimSpace(strings.Join(sec.lines, "\n"))
-		case "Visualization":
-			a.Visualization = extractMermaid(sec.lines)
+		default:
+			a.CustomSections = append(a.CustomSections, customSection(sec))
 		}
 	}
 	return a
@@ -351,19 +370,23 @@ func parseConceptType(name string, lines []string) types.ConceptType {
 
 func parseScenarioFile(content string) types.ParsedScenario {
 	var s types.ParsedScenario
+	var descLines []string
+	pastHeading := false
 	for _, line := range strings.Split(content, "\n") {
 		trimmed := strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(line, "## "):
 			s.Heading = strings.TrimPrefix(line, "## ")
-		case strings.HasPrefix(line, "**Description:**"):
-			s.Description = strings.TrimSpace(strings.TrimPrefix(line, "**Description:**"))
+			pastHeading = true
 		case strings.HasPrefix(trimmed, "> `") && strings.HasSuffix(trimmed, "`"):
 			s.Trace = strings.Trim(strings.TrimPrefix(trimmed, ">"), " `")
 		case strings.HasPrefix(line, "- "):
 			s.Assertions = append(s.Assertions, strings.TrimPrefix(line, "- "))
+		case pastHeading && s.Trace == "" && trimmed != "":
+			descLines = append(descLines, line)
 		}
 	}
+	s.Description = strings.TrimSpace(strings.Join(descLines, "\n"))
 	return s
 }
 
@@ -384,6 +407,8 @@ func parseDecisionFile(content string) types.ParsedDecision {
 			d.Requirement = text
 		case "Decision":
 			d.Decision = text
+		default:
+			d.CustomSections = append(d.CustomSections, customSection(sec))
 		}
 	}
 	return d
@@ -429,23 +454,11 @@ func extractBullets(lines []string) []string {
 	return out
 }
 
-func extractMermaid(lines []string) string {
-	inBlock := false
-	var out []string
-	for _, line := range lines {
-		if strings.TrimSpace(line) == "```mermaid" {
-			inBlock = true
-			continue
-		}
-		if strings.TrimSpace(line) == "```" && inBlock {
-			inBlock = false
-			continue
-		}
-		if inBlock {
-			out = append(out, line)
-		}
+func customSection(sec h3Section) types.CustomSection {
+	return types.CustomSection{
+		Heading: sec.heading,
+		Content: strings.TrimSpace(strings.Join(sec.lines, "\n")),
 	}
-	return strings.TrimSpace(strings.Join(out, "\n"))
 }
 
 func outputsNote(lines []string) string {
@@ -459,4 +472,107 @@ func outputsNote(lines []string) string {
 		return ""
 	}
 	return strings.TrimSpace(strings.Join(lines[lastTable+1:], "\n"))
+}
+
+// parseStateMachineFile parses the content of a state-machine.md file.
+func parseStateMachineFile(content string) types.ParsedStateMachine {
+	var sm types.ParsedStateMachine
+	preamble, sections := splitH3(content)
+
+	// Extract summary and diagram from preamble (everything before ### sections).
+	var summaryLines []string
+	var diagramLines []string
+	inDiagram := false
+	pastHeading := false
+	for _, line := range preamble {
+		if strings.HasPrefix(line, "## ") {
+			pastHeading = true
+			continue
+		}
+		if !pastHeading {
+			continue
+		}
+		if strings.HasPrefix(line, "```mermaid") {
+			inDiagram = true
+			diagramLines = append(diagramLines, line)
+			continue
+		}
+		if inDiagram {
+			diagramLines = append(diagramLines, line)
+			if strings.TrimSpace(line) == "```" {
+				inDiagram = false
+			}
+			continue
+		}
+		summaryLines = append(summaryLines, line)
+	}
+	sm.Summary = strings.TrimSpace(strings.Join(summaryLines, "\n"))
+	sm.Diagram = strings.TrimSpace(strings.Join(diagramLines, "\n"))
+
+	for _, sec := range sections {
+		switch sec.heading {
+		case "Orchestrator":
+			sm.Orchestrator, sm.OrchestratorState = parseOrchestratorSection(sec.lines)
+		case "States":
+			sm.States = parseTable(sec.lines)
+		case "Transitions":
+			sm.Transitions = parseTable(sec.lines)
+		case "Transition Rules":
+			sm.TransitionRules = extractBullets(sec.lines)
+		case "Exceptional Flows":
+			sm.ExceptionalFlows = parseExceptionalFlows(sec.lines)
+		}
+	}
+	return sm
+}
+
+// parseOrchestratorSection extracts the orchestrator text and optional
+// Orchestrator-Managed State table from an Orchestrator H3 section.
+func parseOrchestratorSection(lines []string) (string, *types.Table) {
+	var textLines []string
+	var tableLines []string
+	inTable := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "#### Orchestrator-Managed State" {
+			inTable = true
+			continue
+		}
+		if inTable {
+			if strings.HasPrefix(trimmed, "|") {
+				tableLines = append(tableLines, trimmed)
+			}
+		} else {
+			textLines = append(textLines, line)
+		}
+	}
+	text := strings.TrimSpace(strings.Join(textLines, "\n"))
+	var table *types.Table
+	if len(tableLines) >= 2 {
+		table = parseTable(tableLines)
+	}
+	return text, table
+}
+
+// parseExceptionalFlows splits H4 sub-sections into ExceptionalFlow entries.
+func parseExceptionalFlows(lines []string) []types.ExceptionalFlow {
+	var flows []types.ExceptionalFlow
+	var current *types.ExceptionalFlow
+	for _, line := range lines {
+		if strings.HasPrefix(line, "#### ") {
+			if current != nil {
+				current.Content = strings.TrimSpace(current.Content)
+				flows = append(flows, *current)
+			}
+			heading := strings.TrimPrefix(line, "#### ")
+			current = &types.ExceptionalFlow{Heading: heading}
+		} else if current != nil {
+			current.Content += line + "\n"
+		}
+	}
+	if current != nil {
+		current.Content = strings.TrimSpace(current.Content)
+		flows = append(flows, *current)
+	}
+	return flows
 }

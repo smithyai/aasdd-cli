@@ -1,6 +1,6 @@
 ## ScaffoldsExampleAndVerifies
 
-**Description:** Scaffolding a worked-example spec directory and immediately verifying it produces a conformant result.
+Scaffolding a worked-example spec directory and immediately verifying it produces a conformant result.
 
 > `Scaffold` → `Verify`
 

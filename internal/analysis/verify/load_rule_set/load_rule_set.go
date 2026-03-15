@@ -85,7 +85,7 @@ var rulesByVersion = map[string][]types.Rule{
 		},
 		{
 			ID:          "spec.missing-summary",
-			Description: "spec.md must declare **Summary:** with a one-sentence description of the spec.",
+			Description: "spec.md must have a summary paragraph after the version metadata.",
 			AppliesTo:   "spec.md",
 			Severity:    types.SeverityWarning,
 		},
@@ -103,13 +103,13 @@ var rulesByVersion = map[string][]types.Rule{
 		},
 		{
 			ID:          "spec.invalid-aasdd-version",
-			Description: "spec.md **AASDD:** value must be a recognised AASDD version (e.g. v1, v2).",
+			Description: "spec.md **AASDD:** value must be a recognised AASDD version (e.g. v1).",
 			AppliesTo:   "spec.md",
 			Severity:    types.SeverityWarning,
 		},
 		{
 			ID:          "ability.missing-purpose",
-			Description: "ability.md must declare **Purpose:**.",
+			Description: "ability.md must have a purpose paragraph after the heading.",
 			AppliesTo:   "ability.md",
 			Severity:    types.SeverityError,
 		},
@@ -133,7 +133,7 @@ var rulesByVersion = map[string][]types.Rule{
 		},
 		{
 			ID:          "scenario.missing-description",
-			Description: "scenario.md must declare **Description:** with a summary of the scenario.",
+			Description: "scenario.md must have a description paragraph after the heading.",
 			AppliesTo:   "scenario.md",
 			Severity:    types.SeverityError,
 		},

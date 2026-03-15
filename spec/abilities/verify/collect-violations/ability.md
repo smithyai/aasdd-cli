@@ -1,6 +1,6 @@
 ## CollectViolations
 
-**Purpose:** Applies a rule set to a spec directory and returns all violations found.
+Applies a rule set to a spec directory and returns all violations found.
 
 ### Inputs
 

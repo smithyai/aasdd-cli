@@ -1,6 +1,6 @@
 ## ScaffoldsAndGraphs
 
-**Description:** Scaffolding an example spec and graphing it produces a non-empty graph with the expected nodes and edges.
+Scaffolding an example spec and graphing it produces a non-empty graph with the expected nodes and edges.
 
 > `Scaffold` → `Graph`
 

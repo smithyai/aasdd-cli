@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"regexp"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/collect_violations"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/load_rule_set"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify/collect_violations"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify/load_rule_set"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 

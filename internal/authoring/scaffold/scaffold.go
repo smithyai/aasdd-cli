@@ -64,7 +64,7 @@ var templatesByVersion = map[string][]scaffoldFile{
 	"v1": {
 		{
 			RelPath: "spec.md",
-			Content: "## <Name>\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** <One sentence describing what this spec covers.>\n",
+			Content: "## <Name>\n\n**AASDD:** v1\n**Version:** 0.1.0\n\n<One sentence describing what this spec covers.>\n",
 		},
 		{
 			RelPath: "README.md",
@@ -95,7 +95,7 @@ var exampleTemplatesByVersion = map[string][]scaffoldFile{
 	"v1": {
 		{
 			RelPath: "spec.md",
-			Content: "## Greeter\n\n**AASDD:** v1\n**Version:** 0.1.0\n**Summary:** A minimal service that produces a personalised greeting for a given name.\n",
+			Content: "## Greeter\n\n**AASDD:** v1\n**Version:** 0.1.0\n\nA minimal service that produces a personalised greeting for a given name.\n",
 		},
 		{
 			RelPath: "README.md",
@@ -107,7 +107,7 @@ var exampleTemplatesByVersion = map[string][]scaffoldFile{
 		},
 		{
 			RelPath: filepath.Join("abilities", "greet", "ability.md"),
-			Content: "## Greet\n\n**Purpose:** Produces a personalised greeting for the given name.\n\n### Inputs\n\n| Name | Type | Description |\n| --- | --- | --- |\n| `name` | text | The name to greet. Must be non-empty. |\n\n### Outputs\n\n| Name | Type | Description |\n| --- | --- | --- |\n| `result` | [GreetingResult](../../concepts/greeting/concept.md#greetingresult) | The produced greeting. |\n\n### Invariants\n\n- `result.message` contains the value of `name`.\n\n### State Machine\n\n| From | Event | To | Action |\n| --- | --- | --- | --- |\n| `Idle` | `Greet(name)` | `Done` | Build and store the greeting in `result.message`. |\n\n### Failure Modes\n\n| Failure | Condition | Effect |\n| --- | --- | --- |\n| `EmptyName` | `name` is empty. | Error returned to caller. |\n",
+			Content: "## Greet\n\nProduces a personalised greeting for the given name.\n\n### Inputs\n\n| Name | Type | Description |\n| --- | --- | --- |\n| `name` | text | The name to greet. Must be non-empty. |\n\n### Outputs\n\n| Name | Type | Description |\n| --- | --- | --- |\n| `result` | [GreetingResult](../../concepts/greeting/concept.md#greetingresult) | The produced greeting. |\n\n### Invariants\n\n- `result.message` contains the value of `name`.\n\n### State Machine\n\n| From | Event | To | Action |\n| --- | --- | --- | --- |\n| `Idle` | `Greet(name)` | `Done` | Build and store the greeting in `result.message`. |\n\n### Failure Modes\n\n| Failure | Condition | Effect |\n| --- | --- | --- |\n| `EmptyName` | `name` is empty. | Error returned to caller. |\n",
 		},
 		{
 			RelPath: filepath.Join("concepts", "README.md"),
@@ -131,7 +131,7 @@ var exampleTemplatesByVersion = map[string][]scaffoldFile{
 		},
 		{
 			RelPath: filepath.Join("scenarios", "happy-path", "scenario.md"),
-			Content: "## HappyPath\n\n**Description:** A non-empty name produces a greeting that contains that name.\n\n> `Greet`\n\n- `name` is `Alice`\n- `result.message` contains `Alice`\n",
+			Content: "## HappyPath\n\nA non-empty name produces a greeting that contains that name.\n\n> `Greet`\n\n- `name` is `Alice`\n- `result.message` contains `Alice`\n",
 		},
 	},
 }

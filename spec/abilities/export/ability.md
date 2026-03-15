@@ -1,6 +1,6 @@
 ## Export
 
-**Purpose:** Serializes a spec directory into a portable structured file that can be stored, transferred, or used to reconstruct the original directory.
+Serializes a spec directory into a portable structured file that can be stored, transferred, or used to reconstruct the original directory.
 
 ### Inputs
 
@@ -11,8 +11,8 @@
 
 ### Outputs
 
-| Name     | Type                                                          | Description                      |
-| -------- | ------------------------------------------------------------- | -------------------------------- |
+| Name     | Type                                                                      | Description                      |
+| -------- | ------------------------------------------------------------------------- | -------------------------------- |
 | `result` | [TransferResult](../../concepts/representation/concept.md#transferresult) | Summary of the export operation. |
 
 The data written to `output` (or the output channel) is a serialized [SpecExport](../../concepts/representation/concept.md#specexport) — a structured, semantic representation of the spec directory. The serialization format is determined by the implementation — see `decisions/` for the rationale.
@@ -20,8 +20,9 @@ The data written to `output` (or the output channel) is a serialized [SpecExport
 ### Invariants
 
 - `source` must be a directory.
-- Every spec file (`spec.md`, `ability.md`, `concept.md`, `scenario.md`, `decision.md`) under `source` is represented in the export. All other files and hidden entries are excluded.
-- Abilities, scenarios, sub-abilities, concepts, and decisions are each parsed into their respective structured types.
+- Every spec file (`spec.md`, `ability.md`, `concept.md`, `scenario.md`, `decision.md`, `state-machine.md`) under `source` is represented in the export. All other files and hidden entries are excluded.
+- Abilities, scenarios, sub-abilities, concepts, decisions, and state machines are each parsed into their respective structured types.
+- At most one `state-machine.md` is parsed, from the spec root directory.
 - `result.output_path` is empty when output is written to the output channel.
 
 ### Failure Modes

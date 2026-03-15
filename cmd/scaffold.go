@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
 	"github.com/spf13/cobra"
 )

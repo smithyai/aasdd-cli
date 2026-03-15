@@ -1,6 +1,6 @@
 ## ListVersions
 
-**Purpose:** Lists all AASDD methodology versions known to the tool, with a short summary of each version's changes.
+Lists all AASDD methodology versions known to the tool, with a short summary of each version's changes.
 
 ### Inputs
 

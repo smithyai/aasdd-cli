@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/collect_violations"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify/collect_violations"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 

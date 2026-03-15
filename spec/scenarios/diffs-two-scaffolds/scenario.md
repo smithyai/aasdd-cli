@@ -1,6 +1,6 @@
 ## DiffsTwoScaffolds
 
-**Description:** Scaffolding a minimal spec and an example spec then diffing them reveals the additional constructs in the example.
+Scaffolding a minimal spec and an example spec then diffing them reveals the additional constructs in the example.
 
 > `Scaffold` → `Scaffold` → `Diff`
 

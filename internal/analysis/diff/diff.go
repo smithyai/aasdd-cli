@@ -6,7 +6,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/export"
+	"github.com/smithyai/aasdd-cli/internal/transfer/export"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
@@ -173,12 +173,11 @@ func diffAbility(l, r types.ParsedAbility) []types.DiffEntry {
 	changed := l.Heading != r.Heading ||
 		l.Purpose != r.Purpose ||
 		l.OutputsNote != r.OutputsNote ||
-		l.Notes != r.Notes ||
-		l.Visualization != r.Visualization ||
 		!slicesEqual(l.Invariants, r.Invariants) ||
 		!tablesEqual(l.Inputs, r.Inputs) ||
 		!tablesEqual(l.Outputs, r.Outputs) ||
-		!tablesEqual(l.FailureModes, r.FailureModes)
+		!tablesEqual(l.FailureModes, r.FailureModes) ||
+		!customSectionsEqual(l.CustomSections, r.CustomSections)
 	if !changed {
 		return nil
 	}
@@ -307,6 +306,18 @@ func tablesEqual(a, b *types.Table) bool {
 			if b.Rows[i][k] != v {
 				return false
 			}
+		}
+	}
+	return true
+}
+
+func customSectionsEqual(a, b []types.CustomSection) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Heading != b[i].Heading || a[i].Content != b[i].Content {
+			return false
 		}
 	}
 	return true

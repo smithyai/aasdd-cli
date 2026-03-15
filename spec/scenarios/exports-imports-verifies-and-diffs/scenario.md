@@ -1,6 +1,6 @@
 ## ExportsImportsVerifiesAndDiffs
 
-**Description:** Exporting a spec directory, importing the result, verifying the import, and diffing the original against the import confirms both conformance and structural equivalence.
+Exporting a spec directory, importing the result, verifying the import, and diffing the original against the import confirms both conformance and structural equivalence.
 
 > `Export` → `Import` → `Verify` → `Diff`
 

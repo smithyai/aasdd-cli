@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 

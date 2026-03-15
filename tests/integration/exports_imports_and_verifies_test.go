@@ -4,11 +4,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/diff"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/export"
-	import_ "github.com/smithyai/aasdd-cli/internal/pipeline/import"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify"
+	"github.com/smithyai/aasdd-cli/internal/analysis/diff"
+	"github.com/smithyai/aasdd-cli/internal/transfer/export"
+	import_ "github.com/smithyai/aasdd-cli/internal/transfer/import"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 

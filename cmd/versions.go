@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/load_rule_set"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify/load_rule_set"
 	"github.com/spf13/cobra"
 )
 

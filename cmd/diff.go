@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/diff"
+	"github.com/smithyai/aasdd-cli/internal/analysis/diff"
 	"github.com/smithyai/aasdd-cli/internal/types"
 	"github.com/spf13/cobra"
 )

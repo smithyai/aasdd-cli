@@ -1,6 +1,6 @@
 ## LoadRuleSet
 
-**Purpose:** Derives the complete set of structural rules for a given AASDD version.
+Derives the complete set of structural rules for a given AASDD version.
 
 ### Inputs
 

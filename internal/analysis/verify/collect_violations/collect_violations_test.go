@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/verify/collect_violations"
+	"github.com/smithyai/aasdd-cli/internal/analysis/verify/collect_violations"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
@@ -18,7 +18,7 @@ func minimalRuleSet() types.RuleSet {
 		Rules: []types.Rule{
 			{ID: "directory.missing-spec", Description: "root must have spec.md", AppliesTo: "directory", Severity: types.SeverityError},
 			{ID: "spec.missing-version", Description: "spec.md must declare **Version:**", AppliesTo: "spec.md", Severity: types.SeverityWarning},
-			{ID: "ability.missing-purpose", Description: "ability.md must declare **Purpose:**", AppliesTo: "ability.md", Severity: types.SeverityError},
+			{ID: "ability.missing-purpose", Description: "ability.md must have a purpose paragraph after the heading", AppliesTo: "ability.md", Severity: types.SeverityError},
 		},
 	}
 }
@@ -450,5 +450,141 @@ func TestCollectViolations_Progress_FalseNoOutput(t *testing.T) {
 	})
 	if output != "" {
 		t.Errorf("expected no stderr output when progress=false, got: %q", output)
+	}
+}
+
+// --- evaluateDirectoryRule: specific rule IDs ---
+
+func directoryRuleSet(ruleIDs ...string) types.RuleSet {
+	ruleMap := map[string]types.Rule{
+		"directory.missing-spec":      {ID: "directory.missing-spec", Description: "root must have spec.md", AppliesTo: "directory", Severity: types.SeverityError},
+		"directory.missing-abilities": {ID: "directory.missing-abilities", Description: "must have abilities/", AppliesTo: "directory", Severity: types.SeverityError},
+		"directory.missing-concepts":  {ID: "directory.missing-concepts", Description: "must have concepts/", AppliesTo: "directory", Severity: types.SeverityError},
+		"abilities.empty":             {ID: "abilities.empty", Description: "abilities/ must have subdirs", AppliesTo: "directory", Severity: types.SeverityWarning},
+		"ability.missing-ability-md":  {ID: "ability.missing-ability-md", Description: "each ability dir needs ability.md", AppliesTo: "directory", Severity: types.SeverityError},
+		"concepts.empty":              {ID: "concepts.empty", Description: "concepts/ must have subdirs", AppliesTo: "directory", Severity: types.SeverityWarning},
+		"concept.missing-concept-md":  {ID: "concept.missing-concept-md", Description: "each concept dir needs concept.md", AppliesTo: "directory", Severity: types.SeverityError},
+	}
+	var rules []types.Rule
+	for _, id := range ruleIDs {
+		if r, ok := ruleMap[id]; ok {
+			rules = append(rules, r)
+		}
+	}
+	return types.RuleSet{AASDDVersion: "v1", Rules: rules}
+}
+
+func hasViolationID(violations []types.Violation, ruleID string) bool {
+	for _, v := range violations {
+		if v.Rule == ruleID {
+			return true
+		}
+	}
+	return false
+}
+
+func TestCollectViolations_DirectoryRule_MissingAbilities(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("directory.missing-abilities"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "directory.missing-abilities") {
+		t.Error("expected directory.missing-abilities violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_MissingConcepts(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	os.MkdirAll(filepath.Join(dir, "abilities", "greet"), 0o755)
+	writeFile(t, filepath.Join(dir, "abilities", "greet", "ability.md"), "ability\n")
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("directory.missing-concepts"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "directory.missing-concepts") {
+		t.Error("expected directory.missing-concepts violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_AbilitiesEmpty(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	os.MkdirAll(filepath.Join(dir, "abilities"), 0o755) // no subdirs
+	os.MkdirAll(filepath.Join(dir, "concepts", "x"), 0o755)
+	writeFile(t, filepath.Join(dir, "concepts", "x", "concept.md"), "concept\n")
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("abilities.empty"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "abilities.empty") {
+		t.Error("expected abilities.empty violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_AbilityMissingAbilityMD(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	os.MkdirAll(filepath.Join(dir, "abilities", "greet"), 0o755) // no ability.md inside
+	os.MkdirAll(filepath.Join(dir, "concepts", "x"), 0o755)
+	writeFile(t, filepath.Join(dir, "concepts", "x", "concept.md"), "concept\n")
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("ability.missing-ability-md"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "ability.missing-ability-md") {
+		t.Error("expected ability.missing-ability-md violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_ConceptsEmpty(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	os.MkdirAll(filepath.Join(dir, "abilities", "greet"), 0o755)
+	writeFile(t, filepath.Join(dir, "abilities", "greet", "ability.md"), "ability\n")
+	os.MkdirAll(filepath.Join(dir, "concepts"), 0o755) // no subdirs
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("concepts.empty"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "concepts.empty") {
+		t.Error("expected concepts.empty violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_ConceptMissingConceptMD(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	os.MkdirAll(filepath.Join(dir, "abilities", "greet"), 0o755)
+	writeFile(t, filepath.Join(dir, "abilities", "greet", "ability.md"), "ability\n")
+	os.MkdirAll(filepath.Join(dir, "concepts", "greeting"), 0o755) // no concept.md inside
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("concept.missing-concept-md"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "concept.missing-concept-md") {
+		t.Error("expected concept.missing-concept-md violation")
+	}
+}
+
+func TestCollectViolations_DirectoryRule_AbilitiesIsFile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "spec.md"), "spec\n")
+	writeFile(t, filepath.Join(dir, "abilities"), "not a dir\n") // abilities is a file
+	result, err := collect_violations.CollectViolations(types.SpecTarget{Path: dir},
+		directoryRuleSet("directory.missing-abilities"), false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasViolationID(result.Violations, "directory.missing-abilities") {
+		t.Error("expected directory.missing-abilities violation when abilities is a file, not a directory")
 	}
 }

@@ -322,13 +322,10 @@ var aasddVersionRe = regexp.MustCompile(`^v[1-9][0-9]*$`)
 func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 	checks := map[string]string{
 		"spec.missing-version":         "**Version:**",
-		"spec.missing-summary":         "**Summary:**",
 		"spec.missing-aasdd-version":   "**AASDD:**",
-		"ability.missing-purpose":      "**Purpose:**",
 		"ability.missing-inputs":       "### Inputs",
 		"ability.missing-outputs":      "### Outputs",
 		"concept.missing-type":         "### ",
-		"scenario.missing-description": "**Description:**",
 		"scenario.missing-trace":       ">",
 		"decision.missing-context":     "## Context",
 		"decision.missing-requirement": "## Requirement",
@@ -343,6 +340,34 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 				Description: rule.Description,
 				Path:        path,
 				Message:     fmt.Sprintf("required content missing: %s", needle),
+			}}
+		}
+		return nil
+	}
+
+	// Check for preamble paragraph (text between heading and first ### section).
+	switch rule.ID {
+	case "spec.missing-summary":
+		if !hasPreambleParagraph(content, "**Version:**") {
+			return []types.Violation{{
+				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
+				Path: path, Message: "spec.md must have a summary paragraph after the version metadata",
+			}}
+		}
+		return nil
+	case "ability.missing-purpose":
+		if !hasPreambleParagraph(content, "## ") {
+			return []types.Violation{{
+				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
+				Path: path, Message: "ability.md must have a purpose paragraph after the heading",
+			}}
+		}
+		return nil
+	case "scenario.missing-description":
+		if !hasPreambleParagraph(content, "## ") {
+			return []types.Violation{{
+				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
+				Path: path, Message: "scenario.md must have a description paragraph after the heading",
 			}}
 		}
 		return nil
@@ -380,11 +405,35 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 				Severity:    rule.Severity,
 				Description: rule.Description,
 				Path:        path,
-				Message:     fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, v2, \u2026)", value),
+				Message:     fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, …)", value),
 			}}
 		}
 		return nil
 	}
 
 	return nil
+}
+
+// hasPreambleParagraph checks whether non-empty text exists between the line
+// containing anchor and the first ### section. For ability and scenario files
+// the anchor is "## "; for spec files it is "**Version:**".
+func hasPreambleParagraph(content, anchor string) bool {
+	lines := strings.Split(content, "\n")
+	pastAnchor := false
+	for _, line := range lines {
+		if strings.HasPrefix(line, anchor) {
+			pastAnchor = true
+			continue
+		}
+		if !pastAnchor {
+			continue
+		}
+		if strings.HasPrefix(line, "### ") || strings.HasPrefix(line, "> ") {
+			return false
+		}
+		if strings.TrimSpace(line) != "" && !strings.HasPrefix(line, "**") {
+			return true
+		}
+	}
+	return false
 }

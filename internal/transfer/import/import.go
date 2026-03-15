@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
@@ -87,8 +89,15 @@ func Import(source, outputPath string) (types.TransferResult, error) {
 	}
 	fileCount++
 
+	if exp.StateMachine != nil {
+		if _, writeErr := writeMD(outputPath, "state-machine.md", renderStateMachineFile(*exp.StateMachine)); writeErr != nil {
+			return types.TransferResult{}, writeErr
+		}
+		fileCount++
+	}
+
 	for _, ability := range exp.Abilities {
-		n, writeErr := writeAbility(outputPath, ability)
+		n, writeErr := writeAbility(outputPath, "abilities", ability)
 		if writeErr != nil {
 			return types.TransferResult{}, writeErr
 		}
@@ -96,21 +105,25 @@ func Import(source, outputPath string) (types.TransferResult, error) {
 	}
 
 	for _, scenario := range exp.Scenarios {
-		if _, writeErr := writeMD(outputPath, scenario.Path, renderScenarioFile(scenario)); writeErr != nil {
+		relPath := "scenarios/" + pascalToKebab(scenario.Heading) + "/scenario.md"
+		if _, writeErr := writeMD(outputPath, relPath, renderScenarioFile(scenario)); writeErr != nil {
 			return types.TransferResult{}, writeErr
 		}
 		fileCount++
 	}
 
 	for _, concept := range exp.Concepts {
-		if _, writeErr := writeMD(outputPath, concept.Path, renderConceptFile(concept)); writeErr != nil {
+		domainName := strings.TrimSuffix(concept.Heading, " domain")
+		relPath := "concepts/" + pascalToKebab(domainName) + "/concept.md"
+		if _, writeErr := writeMD(outputPath, relPath, renderConceptFile(concept)); writeErr != nil {
 			return types.TransferResult{}, writeErr
 		}
 		fileCount++
 	}
 
 	for _, decision := range exp.Decisions {
-		if _, writeErr := writeMD(outputPath, decision.Path, renderDecisionFile(decision)); writeErr != nil {
+		relPath := "decisions/" + pascalToKebab(decision.Heading) + "/decision.md"
+		if _, writeErr := writeMD(outputPath, relPath, renderDecisionFile(decision)); writeErr != nil {
 			return types.TransferResult{}, writeErr
 		}
 		fileCount++
@@ -120,14 +133,16 @@ func Import(source, outputPath string) (types.TransferResult, error) {
 }
 
 // writeAbility writes ability.md and recursively writes its sub-abilities.
-func writeAbility(root string, a types.ParsedAbility) (int, error) {
-	if _, writeErr := writeMD(root, a.Path, renderAbilityFile(a)); writeErr != nil {
+func writeAbility(root, parentDir string, a types.ParsedAbility) (int, error) {
+	relDir := parentDir + "/" + pascalToKebab(a.Heading)
+	relPath := relDir + "/ability.md"
+	if _, writeErr := writeMD(root, relPath, renderAbilityFile(a)); writeErr != nil {
 		return 0, writeErr
 	}
 	count := 1
 
 	for _, sub := range a.SubAbilities {
-		n, writeErr := writeAbility(root, sub)
+		n, writeErr := writeAbility(root, relDir, sub)
 		if writeErr != nil {
 			return count, writeErr
 		}
@@ -157,12 +172,17 @@ func renderSpecFile(s types.ParsedSpecFile) string {
 	b.WriteString("\n")
 	b.WriteString("**AASDD:** " + s.AASDDVersion + "\n")
 	b.WriteString("**Version:** " + s.Version + "\n")
-	b.WriteString("**Summary:** " + s.Summary + "\n")
+	if s.Summary != "" {
+		b.WriteString("\n" + s.Summary + "\n")
+	}
 	if len(s.Invariants) > 0 {
 		b.WriteString("\n### Invariants\n\n")
 		for _, inv := range s.Invariants {
 			b.WriteString("- " + inv + "\n")
 		}
+	}
+	for _, cs := range s.CustomSections {
+		b.WriteString("\n### " + cs.Heading + "\n\n" + cs.Content + "\n")
 	}
 	return b.String()
 }
@@ -171,34 +191,39 @@ func renderAbilityFile(a types.ParsedAbility) string {
 	var b strings.Builder
 	b.WriteString("## " + a.Heading + "\n")
 	if a.Purpose != "" {
-		b.WriteString("\n**Purpose:** " + a.Purpose + "\n")
+		b.WriteString("\n" + a.Purpose + "\n")
 	}
+	b.WriteString("\n### Inputs\n\n")
 	if a.Inputs != nil {
-		b.WriteString("\n### Inputs\n\n")
 		b.WriteString(renderTable(a.Inputs))
+	} else {
+		b.WriteString("_None._\n")
 	}
+	b.WriteString("\n### Outputs\n\n")
 	if a.Outputs != nil {
-		b.WriteString("\n### Outputs\n\n")
 		b.WriteString(renderTable(a.Outputs))
 		if a.OutputsNote != "" {
 			b.WriteString("\n" + a.OutputsNote + "\n")
 		}
+	} else {
+		b.WriteString("_None._\n")
 	}
+	b.WriteString("\n### Invariants\n\n")
 	if len(a.Invariants) > 0 {
-		b.WriteString("\n### Invariants\n\n")
 		for _, inv := range a.Invariants {
 			b.WriteString("- " + inv + "\n")
 		}
+	} else {
+		b.WriteString("_None._\n")
 	}
+	b.WriteString("\n### Failure Modes\n\n")
 	if a.FailureModes != nil {
-		b.WriteString("\n### Failure Modes\n\n")
 		b.WriteString(renderTable(a.FailureModes))
+	} else {
+		b.WriteString("_None._\n")
 	}
-	if a.Notes != "" {
-		b.WriteString("\n### Notes\n\n" + a.Notes + "\n")
-	}
-	if a.Visualization != "" {
-		b.WriteString("\n### Visualization\n\n```mermaid\n" + a.Visualization + "\n```\n")
+	for _, cs := range a.CustomSections {
+		b.WriteString("\n### " + cs.Heading + "\n\n" + cs.Content + "\n")
 	}
 	return b.String()
 }
@@ -233,7 +258,7 @@ func renderScenarioFile(s types.ParsedScenario) string {
 	var b strings.Builder
 	b.WriteString("## " + s.Heading + "\n")
 	if s.Description != "" {
-		b.WriteString("\n**Description:** " + s.Description + "\n")
+		b.WriteString("\n" + s.Description + "\n")
 	}
 	b.WriteString("\n> `" + s.Trace + "`\n")
 	if len(s.Assertions) > 0 {
@@ -257,6 +282,52 @@ func renderDecisionFile(d types.ParsedDecision) string {
 	if d.Decision != "" {
 		b.WriteString("\n### Decision\n\n" + d.Decision + "\n")
 	}
+	for _, cs := range d.CustomSections {
+		b.WriteString("\n### " + cs.Heading + "\n\n" + cs.Content + "\n")
+	}
+	return b.String()
+}
+
+func renderStateMachineFile(sm types.ParsedStateMachine) string {
+	var b strings.Builder
+	b.WriteString("## State Machine\n")
+	if sm.Summary != "" {
+		b.WriteString("\n" + sm.Summary + "\n")
+	}
+	if sm.Diagram != "" {
+		b.WriteString("\n" + sm.Diagram + "\n")
+	}
+	b.WriteString("\n### Orchestrator\n")
+	if sm.Orchestrator != "" {
+		b.WriteString("\n" + sm.Orchestrator + "\n")
+	}
+	if sm.OrchestratorState != nil {
+		b.WriteString("\n#### Orchestrator-Managed State\n\n")
+		b.WriteString(renderTable(sm.OrchestratorState))
+	}
+	b.WriteString("\n### States\n\n")
+	if sm.States != nil {
+		b.WriteString(renderTable(sm.States))
+	}
+	b.WriteString("\n### Transitions\n\n")
+	if sm.Transitions != nil {
+		b.WriteString(renderTable(sm.Transitions))
+	}
+	if len(sm.TransitionRules) > 0 {
+		b.WriteString("\n### Transition Rules\n\n")
+		for _, rule := range sm.TransitionRules {
+			b.WriteString("- " + rule + "\n")
+		}
+	}
+	if len(sm.ExceptionalFlows) > 0 {
+		b.WriteString("\n### Exceptional Flows\n")
+		for _, flow := range sm.ExceptionalFlows {
+			b.WriteString("\n#### " + flow.Heading + "\n")
+			if flow.Content != "" {
+				b.WriteString("\n" + flow.Content + "\n")
+			}
+		}
+	}
 	return b.String()
 }
 
@@ -264,25 +335,84 @@ func renderTable(t *types.Table) string {
 	if t == nil || len(t.Headers) == 0 {
 		return ""
 	}
-	var b strings.Builder
-	b.WriteString("| ")
-	b.WriteString(strings.Join(t.Headers, " | "))
-	b.WriteString(" |\n| ")
-	seps := make([]string, len(t.Headers))
+
+	// Calculate max width for each column.
+	widths := make([]int, len(t.Headers))
 	for i, h := range t.Headers {
-		w := max(3, len(h))
-		seps[i] = strings.Repeat("-", w)
+		widths[i] = utf8.RuneCountInString(h)
 	}
-	b.WriteString(strings.Join(seps, " | "))
+	for _, row := range t.Rows {
+		for i, h := range t.Headers {
+			if v := utf8.RuneCountInString(row[h]); v > widths[i] {
+				widths[i] = v
+			}
+		}
+	}
+	for i := range widths {
+		if widths[i] < 3 {
+			widths[i] = 3
+		}
+	}
+
+	var b strings.Builder
+	// Header row
+	b.WriteString("| ")
+	for i, h := range t.Headers {
+		if i > 0 {
+			b.WriteString(" | ")
+		}
+		b.WriteString(h)
+		b.WriteString(strings.Repeat(" ", widths[i]-utf8.RuneCountInString(h)))
+	}
 	b.WriteString(" |\n")
+	// Separator row
+	b.WriteString("| ")
+	for i := range t.Headers {
+		if i > 0 {
+			b.WriteString(" | ")
+		}
+		b.WriteString(strings.Repeat("-", widths[i]))
+	}
+	b.WriteString(" |\n")
+	// Data rows
 	for _, row := range t.Rows {
 		b.WriteString("| ")
-		cells := make([]string, len(t.Headers))
 		for i, h := range t.Headers {
-			cells[i] = row[h]
+			if i > 0 {
+				b.WriteString(" | ")
+			}
+			v := row[h]
+			b.WriteString(v)
+			b.WriteString(strings.Repeat(" ", widths[i]-utf8.RuneCountInString(v)))
 		}
-		b.WriteString(strings.Join(cells, " | "))
 		b.WriteString(" |\n")
+	}
+	return b.String()
+}
+
+// pascalToKebab converts a PascalCase string to kebab-case.
+// Consecutive uppercase letters are treated as an acronym
+// (e.g., "CLI" → "cli", "HTTPServer" → "http-server").
+func pascalToKebab(s string) string {
+	runes := []rune(s)
+	var b strings.Builder
+	for i, r := range runes {
+		if unicode.IsUpper(r) {
+			// Insert hyphen before this uppercase letter when:
+			// - not the first character, AND
+			// - either the previous char is lowercase, OR
+			//   the next char is lowercase (end of an acronym like "HTTP" in "HTTPServer")
+			if i > 0 {
+				prevLower := unicode.IsLower(runes[i-1])
+				nextLower := i+1 < len(runes) && unicode.IsLower(runes[i+1])
+				if prevLower || nextLower {
+					b.WriteByte('-')
+				}
+			}
+			b.WriteRune(unicode.ToLower(r))
+		} else {
+			b.WriteRune(r)
+		}
 	}
 	return b.String()
 }

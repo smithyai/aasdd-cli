@@ -1,6 +1,6 @@
 ## ScaffoldsAndVerifies
 
-**Description:** Scaffolding a new spec directory and immediately verifying it produces a conformant result.
+Scaffolding a new spec directory and immediately verifying it produces a conformant result.
 
 > `Scaffold` → `Verify`
 

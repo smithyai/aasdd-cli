@@ -1,6 +1,8 @@
 package format_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -142,5 +144,94 @@ func TestWriteViolations_Verbose_EmptyDescription_NoExtraLine(t *testing.T) {
 	lines := strings.Split(strings.TrimRight(sb.String(), "\n"), "\n")
 	if len(lines) != 2 {
 		t.Errorf("expected 2 lines for empty description, got %d: %q", len(lines), sb.String())
+	}
+}
+
+// --- WriteFileTree ---
+
+func makeVerificationTarget(t *testing.T) (abilityAbsPath string, result types.VerificationResult) {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "spec.md"), []byte("spec"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "abilities", "greet"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	absAbility := filepath.Join(dir, "abilities", "greet", "ability.md")
+	if err := os.WriteFile(absAbility, []byte("ability"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "other.txt"), []byte("other"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res := types.VerificationResult{
+		Target:        types.SpecTarget{Path: dir},
+		SpecFileNames: []string{"spec.md", "ability.md"},
+	}
+	return absAbility, res
+}
+
+func TestWriteFileTree_ListsFiles(t *testing.T) {
+	_, result := makeVerificationTarget(t)
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	output := sb.String()
+	if !strings.Contains(output, "spec.md") {
+		t.Errorf("output missing spec.md: %q", output)
+	}
+	if !strings.Contains(output, "ability.md") {
+		t.Errorf("output missing ability.md: %q", output)
+	}
+}
+
+func TestWriteFileTree_OKForSpecFileNoViolations(t *testing.T) {
+	_, result := makeVerificationTarget(t)
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	if !strings.Contains(sb.String(), "ok  ") {
+		t.Errorf("expected 'ok  ' prefix for unviolated spec file, got: %q", sb.String())
+	}
+}
+
+func TestWriteFileTree_ErrForViolatedFile(t *testing.T) {
+	abilityPath, result := makeVerificationTarget(t)
+	result.Violations = []types.Violation{
+		{Rule: "r", Severity: types.SeverityError, Path: abilityPath, Message: "missing heading"},
+	}
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	if !strings.Contains(sb.String(), "err ") {
+		t.Errorf("expected 'err ' prefix for error-violated file, got: %q", sb.String())
+	}
+}
+
+func TestWriteFileTree_WarnForWarnedFile(t *testing.T) {
+	abilityPath, result := makeVerificationTarget(t)
+	result.Violations = []types.Violation{
+		{Rule: "r", Severity: types.SeverityWarning, Path: abilityPath, Message: "style warning"},
+	}
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	if !strings.Contains(sb.String(), "warn") {
+		t.Errorf("expected 'warn' prefix for warning-violated file, got: %q", sb.String())
+	}
+}
+
+func TestWriteFileTree_InfoForUnknownFile(t *testing.T) {
+	_, result := makeVerificationTarget(t)
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	if !strings.Contains(sb.String(), "info") {
+		t.Errorf("expected 'info' prefix for non-spec file other.txt, got: %q", sb.String())
+	}
+}
+
+func TestWriteFileTree_DirectoryListed(t *testing.T) {
+	_, result := makeVerificationTarget(t)
+	var sb strings.Builder
+	format.WriteFileTree(&sb, result)
+	if !strings.Contains(sb.String(), "abilities/") {
+		t.Errorf("expected directory entry in tree output, got: %q", sb.String())
 	}
 }

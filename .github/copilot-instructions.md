@@ -25,5 +25,5 @@ Key reminders:
 
 - If a failure path exists in the implementation but has no corresponding spec failure mode, the spec is incomplete — add the failure mode before merging.
 - If new behavior, inputs, outputs, or options are added that are not reflected in the spec (abilities, concepts, or decisions), update the spec first — implementation follows the spec, not the other way around.
-- If the spec includes a state machine, implement transitions exactly as defined in the Transitions table. A sub-ability may have its own `state-machine.md` scoped to its directory — treat it the same way, constrained to that ability's implementation.
+- If the spec includes a state machine, implement transitions exactly as defined in the Transitions table.
 - Never change implementation to match test expectations that contradict the spec.

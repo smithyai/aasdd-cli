@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/diff"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
+	"github.com/smithyai/aasdd-cli/internal/analysis/diff"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
@@ -254,5 +254,91 @@ func TestDiff_ResultTargetsMatch(t *testing.T) {
 	}
 	if result.Right.Path != right {
 		t.Errorf("Right.Path = %q, want %q", result.Right.Path, right)
+	}
+}
+
+// --- Per-construct change detection ---
+
+func makeExampleSpec(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	scaffold.Scaffold(types.SpecTarget{Path: dir}, "v1", true)
+	return dir
+}
+
+func hasChangedEntry(entries []types.DiffEntry, construct string) bool {
+	for _, e := range entries {
+		if e.Kind == types.DiffChanged && e.Construct == construct {
+			return true
+		}
+	}
+	return false
+}
+
+func TestDiff_ChangedAbility(t *testing.T) {
+	left := makeExampleSpec(t)
+	right := makeExampleSpec(t)
+	abilityPath := filepath.Join(right, "abilities", "greet", "ability.md")
+	os.WriteFile(abilityPath,
+		[]byte("## Greet\n\nProduces a completely different greeting.\n\n### Inputs\n\n_None._\n\n### Outputs\n\n_None._\n\n### Invariants\n\n_None._\n\n### Failure Modes\n\n_None._\n"),
+		0o644)
+
+	result, err := diff.Diff(types.SpecTarget{Path: left}, types.SpecTarget{Path: right})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasChangedEntry(result.Entries, "ability") {
+		t.Errorf("expected Changed ability entry, got: %v", result.Entries)
+	}
+}
+
+func TestDiff_ChangedConcept(t *testing.T) {
+	left := makeExampleSpec(t)
+	right := makeExampleSpec(t)
+	conceptPath := filepath.Join(right, "concepts", "greeting", "concept.md")
+	os.WriteFile(conceptPath,
+		[]byte("## Greeting domain\n\nModified intro.\n\n### GreetingResult\n\nDifferent description.\n\n#### Properties\n\n| Name | Type | Description |\n| --- | --- | --- |\n| `message` | text | Changed. |\n"),
+		0o644)
+
+	result, err := diff.Diff(types.SpecTarget{Path: left}, types.SpecTarget{Path: right})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasChangedEntry(result.Entries, "concept") {
+		t.Errorf("expected Changed concept entry, got: %v", result.Entries)
+	}
+}
+
+func TestDiff_ChangedDecision(t *testing.T) {
+	left := makeExampleSpec(t)
+	right := makeExampleSpec(t)
+	decisionPath := filepath.Join(right, "decisions", "output-channel", "decision.md")
+	os.WriteFile(decisionPath,
+		[]byte("## OutputChannel\n\n### Context\n\nDifferent context.\n\n### Requirement\n\nDifferent req.\n\n### Decision\n\nDifferent decision.\n"),
+		0o644)
+
+	result, err := diff.Diff(types.SpecTarget{Path: left}, types.SpecTarget{Path: right})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasChangedEntry(result.Entries, "decision") {
+		t.Errorf("expected Changed decision entry, got: %v", result.Entries)
+	}
+}
+
+func TestDiff_ChangedScenario(t *testing.T) {
+	left := makeExampleSpec(t)
+	right := makeExampleSpec(t)
+	scenarioPath := filepath.Join(right, "scenarios", "happy-path", "scenario.md")
+	os.WriteFile(scenarioPath,
+		[]byte("## HappyPath\n\nModified description.\n\n> `Greet`\n\n- different assertion\n"),
+		0o644)
+
+	result, err := diff.Diff(types.SpecTarget{Path: left}, types.SpecTarget{Path: right})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasChangedEntry(result.Entries, "scenario") {
+		t.Errorf("expected Changed scenario entry, got: %v", result.Entries)
 	}
 }

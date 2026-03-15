@@ -1,19 +1,19 @@
 ## Graph
 
-**Purpose:** Generates a dependency graph of a spec directory showing how abilities, concepts, decisions, and scenarios relate to each other.
+Generates a dependency graph of a spec directory showing how abilities, concepts, decisions, and scenarios relate to each other.
 
 ### Inputs
 
-| Name     | Type                                                        | Description                                                       |
-| -------- | ----------------------------------------------------------- | ----------------------------------------------------------------- |
-| `target` | [SpecTarget](../../concepts/cli/concept.md#spectarget)      | The spec directory to graph.                                      |
-| `format` | [GraphFormat](../../concepts/graph/concept.md#graphformat)  | The output format. Defaults to `Mermaid`.                         |
+| Name     | Type                                                       | Description                               |
+| -------- | ---------------------------------------------------------- | ----------------------------------------- |
+| `target` | [SpecTarget](../../concepts/cli/concept.md#spectarget)     | The spec directory to graph.              |
+| `format` | [GraphFormat](../../concepts/graph/concept.md#graphformat) | The output format. Defaults to `Mermaid`. |
 
 ### Outputs
 
-| Name     | Type                                                        | Description              |
-| -------- | ----------------------------------------------------------- | ------------------------ |
-| `result` | [GraphResult](../../concepts/graph/concept.md#graphresult)  | The rendered graph.      |
+| Name     | Type                                                       | Description         |
+| -------- | ---------------------------------------------------------- | ------------------- |
+| `result` | [GraphResult](../../concepts/graph/concept.md#graphresult) | The rendered graph. |
 
 ### Invariants
 

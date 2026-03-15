@@ -1,6 +1,6 @@
 ## Scaffold
 
-**Purpose:** Creates a spec directory populated with the correct structure and stub files for a new AASDD spec.
+Creates a spec directory populated with the correct structure and stub files for a new AASDD spec.
 
 ### Inputs
 

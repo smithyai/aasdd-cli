@@ -1,6 +1,6 @@
 ## Diff
 
-**Purpose:** Compares two spec directories and reports all structural differences between them.
+Compares two spec directories and reports all structural differences between them.
 
 ### Inputs
 

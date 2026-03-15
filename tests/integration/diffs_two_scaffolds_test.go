@@ -3,8 +3,8 @@ package integration_test
 import (
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/pipeline/diff"
-	"github.com/smithyai/aasdd-cli/internal/pipeline/scaffold"
+	"github.com/smithyai/aasdd-cli/internal/analysis/diff"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
