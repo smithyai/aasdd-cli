@@ -12,11 +12,25 @@ const (
 type NodeKind string
 
 const (
-	NodeKindAbility  NodeKind = "Ability"
-	NodeKindConcept  NodeKind = "Concept"
-	NodeKindDecision NodeKind = "Decision"
-	NodeKindScenario NodeKind = "Scenario"
+	NodeKindAbility      NodeKind = "Ability"
+	NodeKindConcept      NodeKind = "Concept"
+	NodeKindDecision     NodeKind = "Decision"
+	NodeKindScenario     NodeKind = "Scenario"
+	NodeKindStateMachine NodeKind = "StateMachine"
 )
+
+// GraphOptions controls optional parameters for the Graph ability.
+type GraphOptions struct {
+	// Include lists supplementary node kinds to add beyond the default
+	// ability-anchored graph (abilities + concepts). Valid values:
+	// NodeKindScenario, NodeKindDecision, NodeKindStateMachine.
+	Include []NodeKind
+	// Depth limits how many levels of sub-abilities are walked. ≤0 means unlimited.
+	Depth int
+	// Root re-roots the graph at the ability whose last path segment matches
+	// this name (case-insensitive). Empty means the spec root.
+	Root string
+}
 
 // GraphNode is a single node in the spec dependency graph.
 type GraphNode struct {

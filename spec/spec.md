@@ -1,7 +1,7 @@
 ## AASDD CLI
 
 **AASDD:** v1
-**Version:** 0.1.8
+**Version:** 0.2.0
 
 A command-line tool for verifying, scaffolding, exporting, importing, diffing, and graphing AASDD specs.
 

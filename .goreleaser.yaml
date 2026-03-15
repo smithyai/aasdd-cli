@@ -65,6 +65,8 @@ homebrew_casks:
     homepage: https://github.com/smithyai/aasdd-cli
     description: AASDD CLI — verify and scaffold AASDD specs
     license: MIT
+    binaries:
+      - aasdd
 
 scoops:
   - repository:

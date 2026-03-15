@@ -38,8 +38,33 @@ func (e *ReadError) Error() string {
 
 func (e *ReadError) Unwrap() error { return e.Err }
 
+// InvalidInclude is returned when an include value is not a valid supplementary NodeKind.
+type InvalidInclude struct{ Value string }
+
+func (e *InvalidInclude) Error() string {
+	return fmt.Sprintf("invalid include value %q: must be one or more of scenarios, decisions, state-machine", e.Value)
+}
+
+// RootNotFound is returned when the specified root ability name does not match any ability.
+type RootNotFound struct{ Name string }
+
+func (e *RootNotFound) Error() string {
+	return fmt.Sprintf("root ability %q not found", e.Name)
+}
+
+// AmbiguousRoot is returned when the root name matches more than one ability.
+type AmbiguousRoot struct {
+	Name    string
+	Matches []string
+}
+
+func (e *AmbiguousRoot) Error() string {
+	return fmt.Sprintf("root ability %q is ambiguous; matches: %s", e.Name, strings.Join(e.Matches, ", "))
+}
+
 // Graph generates a dependency graph for the spec rooted at target.
-func Graph(target types.SpecTarget, format types.GraphFormat) (types.GraphResult, error) {
+// opts is optional; pass a GraphOptions to restrict by filter or depth.
+func Graph(target types.SpecTarget, format types.GraphFormat, opts ...types.GraphOptions) (types.GraphResult, error) {
 	empty := types.GraphResult{}
 
 	info, err := os.Stat(target.Path)
@@ -55,7 +80,33 @@ func Graph(target types.SpecTarget, format types.GraphFormat) (types.GraphResult
 		return empty, &ReadError{Path: target.Path, Err: err}
 	}
 
-	nodes, edges := buildGraph(spec)
+	var opt types.GraphOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+
+	// Validate and build the include set.
+	includeSet := make(map[types.NodeKind]bool)
+	for _, k := range opt.Include {
+		switch k {
+		case types.NodeKindScenario, types.NodeKindDecision, types.NodeKindStateMachine:
+			includeSet[k] = true
+		default:
+			return empty, &InvalidInclude{Value: string(k)}
+		}
+	}
+
+	// Re-root at the specified ability if requested.
+	if opt.Root != "" {
+		match, err := findAbility(spec.Abilities, opt.Root)
+		if err != nil {
+			return empty, err
+		}
+		spec.Abilities = []types.ParsedAbility{match}
+	}
+
+	nodes, edges := buildGraph(spec, opt.Depth)
+	nodes, edges = applyIncludes(nodes, edges, includeSet)
 
 	sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
 	sort.Slice(edges, func(i, j int) bool {
@@ -86,26 +137,35 @@ func Graph(target types.SpecTarget, format types.GraphFormat) (types.GraphResult
 }
 
 // buildGraph constructs the full set of nodes and edges from a loaded spec.
-func buildGraph(spec types.SpecExport) ([]types.GraphNode, []types.GraphEdge) {
+// maxDepth controls how many levels of sub-abilities are walked; ≤0 means unlimited.
+func buildGraph(spec types.SpecExport, maxDepth int) ([]types.GraphNode, []types.GraphEdge) {
 	var nodes []types.GraphNode
 	var edges []types.GraphEdge
 
 	// headingToID maps lowercased ability heading → ability node ID.
 	headingToID := make(map[string]string)
+	// squishToNodeID maps squished (lowercase, hyphen-stripped) last-segment of an
+	// ability node ID → full node ID. Used to match PascalCase ability names in
+	// the state machine States table (e.g. "AnalyzeContent" → "moderate-content/analyze-content").
+	squishToNodeID := make(map[string]string)
 
-	var walkAbility func(a types.ParsedAbility)
-	walkAbility = func(a types.ParsedAbility) {
+	var walkAbility func(a types.ParsedAbility, depth int)
+	walkAbility = func(a types.ParsedAbility, depth int) {
 		id := abilityNodeID(a.Path)
 		nodes = append(nodes, types.GraphNode{ID: id, Kind: types.NodeKindAbility, Label: a.Heading})
 		headingToID[strings.ToLower(a.Heading)] = id
+		lastSeg := id[strings.LastIndex(id, "/")+1:]
+		squishToNodeID[strings.ToLower(strings.ReplaceAll(lastSeg, "-", ""))] = id
 
-		for _, sub := range a.SubAbilities {
-			walkAbility(sub)
-			edges = append(edges, types.GraphEdge{
-				From:     id,
-				To:       abilityNodeID(sub.Path),
-				Relation: "sub-ability",
-			})
+		if maxDepth <= 0 || depth < maxDepth {
+			for _, sub := range a.SubAbilities {
+				walkAbility(sub, depth+1)
+				edges = append(edges, types.GraphEdge{
+					From:     id,
+					To:       abilityNodeID(sub.Path),
+					Relation: "sub-ability",
+				})
+			}
 		}
 
 		if a.Inputs != nil {
@@ -125,7 +185,7 @@ func buildGraph(spec types.SpecExport) ([]types.GraphNode, []types.GraphEdge) {
 	}
 
 	for _, a := range spec.Abilities {
-		walkAbility(a)
+		walkAbility(a, 1)
 	}
 
 	for _, c := range spec.Concepts {
@@ -155,8 +215,103 @@ func buildGraph(spec types.SpecExport) ([]types.GraphNode, []types.GraphEdge) {
 		}
 	}
 
+	if spec.StateMachine != nil {
+		nodes = append(nodes, types.GraphNode{
+			ID:    "state-machine",
+			Kind:  types.NodeKindStateMachine,
+			Label: "State Machine",
+		})
+		if spec.StateMachine.States != nil {
+			for _, row := range spec.StateMachine.States.Rows {
+				abilityName := strings.Trim(row["Ability"], "` ")
+				if abilityName == "" || abilityName == "\u2014" {
+					continue
+				}
+				squished := strings.ToLower(strings.ReplaceAll(abilityName, "-", ""))
+				if aid, ok := squishToNodeID[squished]; ok {
+					edges = append(edges, types.GraphEdge{
+						From:     "state-machine",
+						To:       aid,
+						Relation: "orchestrates",
+					})
+				}
+			}
+		}
+	}
+
 	edges = deduplicateEdges(edges)
 	return nodes, edges
+}
+
+// applyIncludes post-processes the full node/edge set to produce the
+// ability-anchored graph. Abilities and concepts are always retained.
+// Scenarios, decisions, and state machine are only retained when their
+// NodeKind appears in include.
+func applyIncludes(nodes []types.GraphNode, edges []types.GraphEdge, include map[types.NodeKind]bool) ([]types.GraphNode, []types.GraphEdge) {
+	var filteredNodes []types.GraphNode
+	for _, n := range nodes {
+		switch n.Kind {
+		case types.NodeKindAbility, types.NodeKindConcept:
+			filteredNodes = append(filteredNodes, n)
+		default:
+			if include[n.Kind] {
+				filteredNodes = append(filteredNodes, n)
+			}
+		}
+	}
+
+	var filteredEdges []types.GraphEdge
+	for _, e := range edges {
+		switch e.Relation {
+		case "sub-ability", "input", "output":
+			filteredEdges = append(filteredEdges, e)
+		case "traces":
+			if include[types.NodeKindScenario] {
+				filteredEdges = append(filteredEdges, e)
+			}
+		case "orchestrates":
+			if include[types.NodeKindStateMachine] {
+				filteredEdges = append(filteredEdges, e)
+			}
+		}
+	}
+
+	return filteredNodes, filteredEdges
+}
+
+// findAbility searches the ability tree for an ability whose last path segment
+// or full ID matches name (case-insensitive). Returns AmbiguousRoot if more
+// than one ability matches, or RootNotFound if none match.
+func findAbility(abilities []types.ParsedAbility, name string) (types.ParsedAbility, error) {
+	lower := strings.ToLower(name)
+	var matches []types.ParsedAbility
+	var matchPaths []string
+
+	var search func([]types.ParsedAbility)
+	search = func(abs []types.ParsedAbility) {
+		for _, a := range abs {
+			id := abilityNodeID(a.Path)
+			lastSeg := id
+			if idx := strings.LastIndex(id, "/"); idx >= 0 {
+				lastSeg = id[idx+1:]
+			}
+			if strings.ToLower(lastSeg) == lower || strings.ToLower(id) == lower {
+				matches = append(matches, a)
+				matchPaths = append(matchPaths, id)
+			}
+			search(a.SubAbilities)
+		}
+	}
+	search(abilities)
+
+	switch len(matches) {
+	case 0:
+		return types.ParsedAbility{}, &RootNotFound{Name: name}
+	case 1:
+		return matches[0], nil
+	default:
+		return types.ParsedAbility{}, &AmbiguousRoot{Name: name, Matches: matchPaths}
+	}
 }
 
 // abilityNodeID derives a stable node ID from an ability's file path.
@@ -243,6 +398,8 @@ func mermaidSafeID(id string, kind types.NodeKind) string {
 		prefix = "D"
 	case types.NodeKindScenario:
 		prefix = "S"
+	case types.NodeKindStateMachine:
+		prefix = "SM"
 	}
 	safe := regexp.MustCompile(`[^A-Za-z0-9]+`).ReplaceAllString(id, "_")
 	safe = strings.Trim(safe, "_")
@@ -313,6 +470,8 @@ func renderMermaid(nodes []types.GraphNode, edges []types.GraphEdge) string {
 			fromKind, toKind = types.NodeKindAbility, types.NodeKindConcept
 		case "traces":
 			fromKind, toKind = types.NodeKindScenario, types.NodeKindAbility
+		case "orchestrates":
+			fromKind, toKind = types.NodeKindStateMachine, types.NodeKindAbility
 		}
 		from := lookupMermaidID(e.From, fromKind)
 		to := lookupMermaidID(e.To, toKind)
@@ -332,6 +491,8 @@ func dotShape(kind types.NodeKind) string {
 		return "diamond"
 	case types.NodeKindScenario:
 		return "parallelogram"
+	case types.NodeKindStateMachine:
+		return "hexagon"
 	default:
 		return "box"
 	}
@@ -349,6 +510,8 @@ func dotNodeID(id string, kind types.NodeKind) string {
 		prefix = "decision"
 	case types.NodeKindScenario:
 		prefix = "scenario"
+	case types.NodeKindStateMachine:
+		prefix = "sm"
 	}
 	return prefix + ":" + id
 }
@@ -395,6 +558,8 @@ func renderDOT(nodes []types.GraphNode, edges []types.GraphEdge) string {
 			fromKind, toKind = types.NodeKindAbility, types.NodeKindConcept
 		case "traces":
 			fromKind, toKind = types.NodeKindScenario, types.NodeKindAbility
+		case "orchestrates":
+			fromKind, toKind = types.NodeKindStateMachine, types.NodeKindAbility
 		}
 		from := lookupDotID(e.From, fromKind)
 		to := lookupDotID(e.To, toKind)
