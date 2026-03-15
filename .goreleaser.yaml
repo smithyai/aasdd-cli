@@ -67,6 +67,10 @@ homebrew_casks:
     license: MIT
     binaries:
       - aasdd
+    custom_block: |
+      postflight do
+        system "xattr", "-dr", "com.apple.quarantine", staged_path.to_s
+      end
 
 scoops:
   - repository:

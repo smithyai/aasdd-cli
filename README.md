@@ -15,8 +15,13 @@ The official CLI for [Ability-Anchored Spec-Driven Development (AASDD)](https://
 ### Homebrew (macOS / Linux)
 
 ```sh
-brew install smithyai/tap/aasdd
+brew install smithyai/tap/aasdd-cli
 ```
+
+> **Note:** The binary is not code-signed with an Apple Developer ID. macOS Gatekeeper may block it on first run with a warning about unverified software. To clear it:
+> ```sh
+> xattr -d com.apple.quarantine $(which aasdd)
+> ```
 
 ### Docker
 
