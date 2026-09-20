@@ -88,14 +88,24 @@ func PadTable(lines []string) []string {
 	return out
 }
 
+// IsFence reports whether a line opens or closes a fenced code block.
+func IsFence(line string) bool {
+	return strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~")
+}
+
 // PadDocument rewrites every table in a Markdown document into the canonical
-// padded form and leaves every other line untouched.
+// padded form and leaves every other line untouched. Lines inside fenced code
+// blocks are never treated as table rows.
 func PadDocument(text string) string {
 	lines := strings.Split(text, "\n")
 	out := make([]string, 0, len(lines))
+	inFence := false
 	i := 0
 	for i < len(lines) {
-		if !strings.HasPrefix(lines[i], "|") {
+		if IsFence(lines[i]) {
+			inFence = !inFence
+		}
+		if inFence || !strings.HasPrefix(lines[i], "|") {
 			out = append(out, lines[i])
 			i++
 			continue

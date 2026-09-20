@@ -74,11 +74,13 @@ var v2Additions = []types.Rule{
 	rule("spec.missing-invariants", "spec.md must contain a ### Invariants section.", "spec.md", types.SeverityError),
 	rule("spec.section-order", "spec.md sections appear in the order Purpose, Non-Goals, Success Criteria, Invariants, Failure Modes, then custom sections.", "spec.md", types.SeverityError),
 	rule("spec.criteria-columns", "The Success Criteria table has the columns Criterion, Abilities, and Scenarios.", "spec.md", types.SeverityError),
+	rule("spec.table-columns", "A spec-level Failure Modes table has the columns Failure, Condition, and Effect.", "spec.md", types.SeverityError),
 	// ability.md
 	rule("ability.missing-invariants", "ability.md must contain a ### Invariants section.", "ability.md", types.SeverityError),
 	rule("ability.missing-failure-modes", "ability.md must contain a ### Failure Modes section.", "ability.md", types.SeverityError),
 	rule("ability.section-order", "ability.md sections appear in the order Inputs, Outputs, Invariants, Failure Modes, Idempotency, Composition, then custom sections.", "ability.md", types.SeverityError),
 	rule("ability.composition-columns", "The Composition table has the columns Step, Ability, Consumes, and Produces.", "ability.md", types.SeverityError),
+	rule("ability.table-columns", "Inputs and Outputs tables have the columns Name, Type, and Description; the Failure Modes table has Failure, Condition, and Effect.", "ability.md", types.SeverityError),
 	rule("ability.delegated-extra-sections", "A delegated ability (one with a **Spec:** label) has no sections.", "ability.md", types.SeverityError),
 	rule("ability.delegated-missing-version", "A delegated ability declares the delegated spec's version with **Version:**.", "ability.md", types.SeverityError),
 	// decision.md
@@ -89,13 +91,15 @@ var v2Additions = []types.Rule{
 	rule("scenario.trace-format", "The trace is a sequence of backticked nodes joined by →, with divergences written as — Condition →.", "scenario.md", types.SeverityError),
 	// concept.md
 	rule("concept.heading-domain", "concept.md opens with a ## {DomainName} domain heading.", "concept.md", types.SeverityError),
-	rule("concept.type-table", "Every type in concept.md has a Properties table or a Value/Meaning table.", "concept.md", types.SeverityError),
+	rule("concept.type-table", "Every type in concept.md has a Properties table or a Value/Meaning table; sections without a table after the last type are custom sections.", "concept.md", types.SeverityError),
+	rule("concept.table-columns", "Every type table in concept.md has the columns Name, Type, and Description, or Value and Meaning.", "concept.md", types.SeverityError),
 	// state-machine.md
 	rule("state-machine.missing-diagram", "state-machine.md must contain a fenced diagram before its sections.", "state-machine.md", types.SeverityError),
 	rule("state-machine.missing-orchestrator", "state-machine.md must contain a ### Orchestrator section.", "state-machine.md", types.SeverityError),
 	rule("state-machine.missing-states", "state-machine.md must contain a ### States section.", "state-machine.md", types.SeverityError),
 	rule("state-machine.missing-transitions", "state-machine.md must contain a ### Transitions section.", "state-machine.md", types.SeverityError),
 	rule("state-machine.section-order", "state-machine.md sections appear in the order Orchestrator, States, Transitions, Transition Rules, Exceptional Flows.", "state-machine.md", types.SeverityError),
+	rule("state-machine.table-columns", "The States table has the columns State, Ability, and Description; Transitions has From, To, Trigger, and Data Passed Forward; Orchestrator-Managed State has Name, Type, and Description.", "state-machine.md", types.SeverityError),
 	// spec-wide: placeholders and readiness
 	rule("placeholder.misplaced", "_None._ is permitted only for Inputs, Failure Modes, and Non-Goals; _Pending._ only for required sections; _Open._ only for a Decision.", "spec", types.SeverityError),
 	rule("pending.not-allowed", "At 1.0.0 and above, no section is _Pending._.", "spec", types.SeverityError),
@@ -103,7 +107,7 @@ var v2Additions = []types.Rule{
 	// spec-wide: naming and references
 	rule("folder.name-mismatch", "Every ability, scenario, decision, and concept folder is named the kebab-case form of its heading.", "spec", types.SeverityError),
 	rule("link.broken", "Every relative link resolves to an existing file, and every anchor to a heading in that file.", "spec", types.SeverityError),
-	rule("type.undefined", "Every type in Inputs, Outputs, and Properties is a scalar, a link to a concept, or noted as external.", "spec", types.SeverityError),
+	rule("type.undefined", "Every type in Inputs, Outputs, and Properties is a scalar, a link to a concept, or noted as external by a description that names the spec defining it.", "spec", types.SeverityError),
 	// spec-wide: success criteria
 	rule("spec.criteria-unknown-ability", "Every name in the Abilities column of Success Criteria is a root ability of this spec.", "spec", types.SeverityError),
 	rule("spec.criteria-unserved-root", "Every root ability appears in the Abilities column of at least one success criterion.", "spec", types.SeverityError),

@@ -207,7 +207,9 @@ func diffStateMachine(l, r *types.ParsedStateMachine) []types.DiffEntry {
 		!tablesEqual(l.States, r.States) ||
 		!tablesEqual(l.Transitions, r.Transitions) ||
 		!slicesEqual(l.TransitionRules, r.TransitionRules) ||
-		!flowsEqual(l.ExceptionalFlows, r.ExceptionalFlows)
+		!flowsEqual(l.ExceptionalFlows, r.ExceptionalFlows) ||
+		!placeholdersEqual(l.Placeholders, r.Placeholders) ||
+		!customSectionsEqual(l.CustomSections, r.CustomSections)
 	if !changed {
 		return nil
 	}

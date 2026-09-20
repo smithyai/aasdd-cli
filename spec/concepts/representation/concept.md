@@ -42,19 +42,19 @@ Structured content of a `spec.md` file.
 
 #### Properties
 
-| Name               | Type                                       | Description                                                                                             |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `heading`          | text                                       | Top-level heading (the spec name).                                                                      |
-| `aasdd`            | text                                       | Value of the `**AASDD:**` label.                                                                        |
-| `version`          | text                                       | Value of the `**Version:**` label.                                                                      |
-| `summary`          | text                                       | Summary paragraph after the version metadata.                                                           |
-| `purpose`          | text                                       | Prose under `### Purpose`, if present.                                                                  |
-| `non_goals`        | list of text                               | Bullet points under `### Non-Goals`, if present.                                                        |
-| `success_criteria` | optional [Table](#table)                   | Rows from the `### Success Criteria` table, if present.                                                 |
-| `invariants`       | list of text                               | Bullet points under `### Invariants`, if present.                                                       |
-| `failure_modes`    | optional [Table](#table)                   | Rows from the `### Failure Modes` table, if present.                                                    |
-| `placeholders`     | map of text to [Placeholder](#placeholder) | Section heading to the placeholder it carried, for every section that held a marker instead of content. |
-| `custom_sections`  | list of [CustomSection](#customsection)    | Custom `###` sections after all required and optional sections, if any.                                 |
+| Name               | Type                                       | Description                                                                                                                                                      |
+| ------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `heading`          | text                                       | Top-level heading (the spec name).                                                                                                                               |
+| `aasdd`            | text                                       | Value of the `**AASDD:**` label.                                                                                                                                 |
+| `version`          | text                                       | Value of the `**Version:**` label.                                                                                                                               |
+| `summary`          | text                                       | Summary paragraph after the version metadata.                                                                                                                    |
+| `purpose`          | text                                       | Prose under `### Purpose`, if present.                                                                                                                           |
+| `non_goals`        | list of text                               | Bullet points under `### Non-Goals`, if present.                                                                                                                 |
+| `success_criteria` | optional [Table](#table)                   | Rows from the `### Success Criteria` table, if present.                                                                                                          |
+| `invariants`       | list of text                               | Bullet points under `### Invariants`, if present.                                                                                                                |
+| `failure_modes`    | optional [Table](#table)                   | Rows from the `### Failure Modes` table, if present.                                                                                                             |
+| `placeholders`     | map of text to [Placeholder](#placeholder) | Section heading to the placeholder it carried, for every section that held a marker instead of content.                                                          |
+| `custom_sections`  | list of [CustomSection](#customsection)    | Custom `###` sections after all required and optional sections, if any. In a spec written against AASDD v1, sections named like v2 sections are custom sections. |
 
 ### Table
 
@@ -73,22 +73,22 @@ Structured content of an `ability.md` file.
 
 #### Properties
 
-| Name              | Type                                       | Description                                                                                             |
-| ----------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `heading`         | text                                       | Top-level heading (the ability name).                                                                   |
-| `purpose`         | text                                       | Purpose paragraph after the heading, through the first `###` or metadata label.                         |
-| `spec`            | text                                       | Value of the `**Spec:**` label when the ability is delegated; empty otherwise.                          |
-| `spec_version`    | text                                       | Value of the `**Version:**` label when the ability is delegated; empty otherwise.                       |
-| `inputs`          | optional [Table](#table)                   | Rows from the `### Inputs` table.                                                                       |
-| `outputs`         | optional [Table](#table)                   | Rows from the `### Outputs` table.                                                                      |
-| `outputs_note`    | text                                       | Any prose following the `### Outputs` table, if present.                                                |
-| `invariants`      | list of text                               | Bullet points under `### Invariants`.                                                                   |
-| `failure_modes`   | optional [Table](#table)                   | Rows from the `### Failure Modes` table.                                                                |
-| `idempotency`     | text                                       | Prose under `### Idempotency`, if present.                                                              |
-| `composition`     | optional [Table](#table)                   | Rows from the `### Composition` table, if present.                                                      |
-| `placeholders`    | map of text to [Placeholder](#placeholder) | Section heading to the placeholder it carried, for every section that held a marker instead of content. |
-| `custom_sections` | list of [CustomSection](#customsection)    | Custom `###` sections after all required and optional sections, if any.                                 |
-| `sub_abilities`   | list of [ParsedAbility](#parsedability)    | Parsed sub-ability files nested under the ability directory.                                            |
+| Name              | Type                                       | Description                                                                                                                                                                                            |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `heading`         | text                                       | Top-level heading (the ability name).                                                                                                                                                                  |
+| `purpose`         | text                                       | Purpose paragraph after the heading, through the first `###` or metadata label.                                                                                                                        |
+| `spec`            | text                                       | Value of the `**Spec:**` label when the ability is delegated; empty otherwise.                                                                                                                         |
+| `spec_version`    | text                                       | Value of the `**Version:**` label when the ability is delegated; empty otherwise.                                                                                                                      |
+| `inputs`          | optional [Table](#table)                   | Rows from the `### Inputs` table.                                                                                                                                                                      |
+| `outputs`         | optional [Table](#table)                   | Rows from the `### Outputs` table.                                                                                                                                                                     |
+| `outputs_note`    | text                                       | Any prose following the `### Outputs` table, if present.                                                                                                                                               |
+| `invariants`      | list of text                               | Bullet points under `### Invariants`.                                                                                                                                                                  |
+| `failure_modes`   | optional [Table](#table)                   | Rows from the `### Failure Modes` table.                                                                                                                                                               |
+| `idempotency`     | text                                       | Prose under `### Idempotency`, if present.                                                                                                                                                             |
+| `composition`     | optional [Table](#table)                   | Rows from the `### Composition` table, if present.                                                                                                                                                     |
+| `placeholders`    | map of text to [Placeholder](#placeholder) | Section heading to the placeholder it carried, for every section that held a marker instead of content.                                                                                                |
+| `custom_sections` | list of [CustomSection](#customsection)    | Custom `###` sections after all required and optional sections, if any. A recognized optional section whose body is neither its expected form nor a placeholder is preserved here rather than dropped. |
+| `sub_abilities`   | list of [ParsedAbility](#parsedability)    | Parsed sub-ability files nested under the ability directory.                                                                                                                                           |
 
 ### ParsedConcept
 
@@ -96,11 +96,12 @@ Structured content of a `concept.md` file.
 
 #### Properties
 
-| Name      | Type                                | Description                                                |
-| --------- | ----------------------------------- | ---------------------------------------------------------- |
-| `heading` | text                                | Top-level heading (the concept domain name).               |
-| `intro`   | text                                | Prose between the heading and the first `###`, if present. |
-| `types`   | list of [ConceptType](#concepttype) | Named types defined in the file.                           |
+| Name              | Type                                    | Description                                                 |
+| ----------------- | --------------------------------------- | ----------------------------------------------------------- |
+| `heading`         | text                                    | Top-level heading (the concept domain name).                |
+| `intro`           | text                                    | Prose between the heading and the first `###`, if present.  |
+| `types`           | list of [ConceptType](#concepttype)     | Named types defined in the file.                            |
+| `custom_sections` | list of [CustomSection](#customsection) | Sections without a table that follow the last type, if any. |
 
 ### ConceptType
 
@@ -164,16 +165,18 @@ Structured content of a `state-machine.md` file.
 
 #### Properties
 
-| Name                         | Type                                        | Description                                                               |
-| ---------------------------- | ------------------------------------------- | ------------------------------------------------------------------------- |
-| `summary`                    | text                                        | Summary paragraph after the `## State Machine` heading.                   |
-| `diagram`                    | text                                        | Raw content of the mermaid code block, including fences.                  |
-| `orchestrator`               | text                                        | Prose under `### Orchestrator`.                                           |
-| `orchestrator_managed_state` | optional [Table](#table)                    | Table under `#### Orchestrator-Managed State`, if present.                |
-| `states`                     | [Table](#table)                             | Table under `### States`.                                                 |
-| `transitions`                | [Table](#table)                             | Table under `### Transitions`.                                            |
-| `transition_rules`           | list of text                                | Bullet points under `### Transition Rules`, if present.                   |
-| `exceptional_flows`          | list of [ExceptionalFlow](#exceptionalflow) | `#### {FlowName}` sub-sections under `### Exceptional Flows`, if present. |
+| Name                         | Type                                        | Description                                                                                             |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `summary`                    | text                                        | Summary paragraph after the `## State Machine` heading.                                                 |
+| `diagram`                    | text                                        | Raw content of the mermaid code block, including fences.                                                |
+| `orchestrator`               | text                                        | Prose under `### Orchestrator`.                                                                         |
+| `orchestrator_managed_state` | optional [Table](#table)                    | Table under `#### Orchestrator-Managed State`, if present.                                              |
+| `states`                     | [Table](#table)                             | Table under `### States`.                                                                               |
+| `transitions`                | [Table](#table)                             | Table under `### Transitions`.                                                                          |
+| `transition_rules`           | list of text                                | Bullet points under `### Transition Rules`, if present.                                                 |
+| `exceptional_flows`          | list of [ExceptionalFlow](#exceptionalflow) | `#### {FlowName}` sub-sections under `### Exceptional Flows`, if present.                               |
+| `placeholders`               | map of text to [Placeholder](#placeholder)  | Section heading to the placeholder it carried, for every section that held a marker instead of content. |
+| `custom_sections`            | list of [CustomSection](#customsection)     | Custom `###` sections after all required and optional sections, if any.                                 |
 
 ### ExceptionalFlow
 

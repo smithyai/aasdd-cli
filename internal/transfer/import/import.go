@@ -334,29 +334,45 @@ func renderStateMachineFile(sm types.ParsedStateMachine) string {
 	if sm.Diagram != "" {
 		b.WriteString("\n" + sm.Diagram + "\n")
 	}
-	b.WriteString("\n### Orchestrator\n")
-	if sm.Orchestrator != "" {
-		b.WriteString("\n" + sm.Orchestrator + "\n")
+	if ph, ok := sm.Placeholders["Orchestrator"]; ok {
+		b.WriteString("\n### Orchestrator\n\n" + marker(ph) + "\n")
+	} else {
+		b.WriteString("\n### Orchestrator\n")
+		if sm.Orchestrator != "" {
+			b.WriteString("\n" + sm.Orchestrator + "\n")
+		}
+		if sm.OrchestratorState != nil {
+			b.WriteString("\n#### Orchestrator-Managed State\n\n")
+			b.WriteString(renderTable(sm.OrchestratorState))
+		}
 	}
-	if sm.OrchestratorState != nil {
-		b.WriteString("\n#### Orchestrator-Managed State\n\n")
-		b.WriteString(renderTable(sm.OrchestratorState))
+	if ph, ok := sm.Placeholders["States"]; ok {
+		b.WriteString("\n### States\n\n" + marker(ph) + "\n")
+	} else {
+		b.WriteString("\n### States\n\n")
+		if sm.States != nil {
+			b.WriteString(renderTable(sm.States))
+		}
 	}
-	b.WriteString("\n### States\n\n")
-	if sm.States != nil {
-		b.WriteString(renderTable(sm.States))
+	if ph, ok := sm.Placeholders["Transitions"]; ok {
+		b.WriteString("\n### Transitions\n\n" + marker(ph) + "\n")
+	} else {
+		b.WriteString("\n### Transitions\n\n")
+		if sm.Transitions != nil {
+			b.WriteString(renderTable(sm.Transitions))
+		}
 	}
-	b.WriteString("\n### Transitions\n\n")
-	if sm.Transitions != nil {
-		b.WriteString(renderTable(sm.Transitions))
-	}
-	if len(sm.TransitionRules) > 0 {
+	if ph, ok := sm.Placeholders["Transition Rules"]; ok {
+		b.WriteString("\n### Transition Rules\n\n" + marker(ph) + "\n")
+	} else if len(sm.TransitionRules) > 0 {
 		b.WriteString("\n### Transition Rules\n\n")
 		for _, rule := range sm.TransitionRules {
 			b.WriteString("- " + rule + "\n")
 		}
 	}
-	if len(sm.ExceptionalFlows) > 0 {
+	if ph, ok := sm.Placeholders["Exceptional Flows"]; ok {
+		b.WriteString("\n### Exceptional Flows\n\n" + marker(ph) + "\n")
+	} else if len(sm.ExceptionalFlows) > 0 {
 		b.WriteString("\n### Exceptional Flows\n")
 		for _, flow := range sm.ExceptionalFlows {
 			b.WriteString("\n#### " + flow.Heading + "\n")
@@ -365,6 +381,7 @@ func renderStateMachineFile(sm types.ParsedStateMachine) string {
 			}
 		}
 	}
+	writeCustomSections(&b, sm.CustomSections)
 	return b.String()
 }
 

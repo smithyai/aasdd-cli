@@ -302,11 +302,12 @@ var semverRe = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
 	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
-// versionLineRe extracts the value after **Version:**
-var versionLineRe = regexp.MustCompile(`(?m)^\*\*Version:\*\*\s*(\S+)`)
+// versionLineRe extracts the value after **Version:** on the same line; an
+// empty value captures "" rather than the next line's first word.
+var versionLineRe = regexp.MustCompile(`(?m)^\*\*Version:\*\*[ \t]*(\S*)`)
 
-// aasddVersionLineRe extracts the value after **AASDD:**
-var aasddVersionLineRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*\s*(\S+)`)
+// aasddVersionLineRe extracts the value after **AASDD:** on the same line.
+var aasddVersionLineRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*[ \t]*(\S*)`)
 
 // aasddVersionRe matches a valid AASDD version: v followed by a positive integer with no leading zeros.
 var aasddVersionRe = regexp.MustCompile(`^v[1-9][0-9]*$`)

@@ -166,7 +166,8 @@ var specFileNames = map[string]bool{
 	"scenario.md": true, "decision.md": true, "state-machine.md": true,
 }
 
-// specFiles lists every spec file under the directory, sorted.
+// specFiles lists every spec file under the directory, sorted by slash path so
+// the order is the same on every platform.
 func (m *specModel) specFiles() []string {
 	var files []string
 	_ = filepath.WalkDir(m.dir, func(p string, d os.DirEntry, err error) error {
@@ -178,7 +179,7 @@ func (m *specModel) specFiles() []string {
 		}
 		return nil
 	})
-	sort.Strings(files)
+	sort.Slice(files, func(i, j int) bool { return filepath.ToSlash(files[i]) < filepath.ToSlash(files[j]) })
 	return files
 }
 
@@ -249,13 +250,16 @@ func sortedKeys(m map[string]string) []string {
 	return keys
 }
 
+// Where each placeholder is permitted. A placeholder outside these sets is
+// misplaced; the sets match the rule description in load_rule_set.
 var (
-	specNoneAllowed        = map[string]bool{"Non-Goals": true}
-	specPendingAllowed     = map[string]bool{"Purpose": true, "Non-Goals": true, "Success Criteria": true, "Invariants": true}
-	abilityNoneAllowed     = map[string]bool{"Inputs": true, "Failure Modes": true}
-	abilityPendingAllowed  = map[string]bool{"Inputs": true, "Outputs": true, "Invariants": true, "Failure Modes": true}
-	decisionPendingAllowed = map[string]bool{"Context": true, "Requirement": true}
-	decisionOpenAllowed    = map[string]bool{"Decision": true}
+	specNoneAllowed            = map[string]bool{"Non-Goals": true, "Failure Modes": true}
+	specPendingAllowed         = map[string]bool{"Purpose": true, "Non-Goals": true, "Success Criteria": true, "Invariants": true}
+	abilityNoneAllowed         = map[string]bool{"Inputs": true, "Failure Modes": true}
+	abilityPendingAllowed      = map[string]bool{"Inputs": true, "Outputs": true, "Invariants": true, "Failure Modes": true}
+	decisionPendingAllowed     = map[string]bool{"Context": true, "Requirement": true, "Decision": true}
+	decisionOpenAllowed        = map[string]bool{"Decision": true}
+	stateMachinePendingAllowed = map[string]bool{"Orchestrator": true, "States": true, "Transitions": true}
 )
 
 func placementOK(placeholder, section string, none, pending, open map[string]bool) bool {
@@ -280,12 +284,38 @@ func (m *specModel) misplacedPlaceholders(rule types.Rule) []types.Violation {
 			}
 		}
 	}
+	custom := func(p string, sections []types.CustomSection) {
+		for _, cs := range sections {
+			if ph := markerPlaceholder(cs.Content); ph != "" {
+				out = append(out, newViolation(rule, p, fmt.Sprintf("_%s._ is not permitted in custom section %s", ph, cs.Heading)))
+			}
+		}
+	}
 	check(m.abs("spec.md"), m.exp.Placeholders, specNoneAllowed, specPendingAllowed, nil)
+	custom(m.abs("spec.md"), m.exp.CustomSections)
 	for _, n := range m.nodes {
 		check(m.abs(n.a.Path), n.a.Placeholders, abilityNoneAllowed, abilityPendingAllowed, nil)
+		custom(m.abs(n.a.Path), n.a.CustomSections)
+		if ph := markerPlaceholder(n.a.Idempotency); ph != "" {
+			out = append(out, newViolation(rule, m.abs(n.a.Path), fmt.Sprintf("_%s._ is not permitted for section Idempotency", ph)))
+		}
+	}
+	for _, c := range m.exp.Concepts {
+		custom(m.abs(c.Path), c.CustomSections)
 	}
 	for _, d := range m.exp.Decisions {
 		check(m.abs(d.Path), d.Placeholders, nil, decisionPendingAllowed, decisionOpenAllowed)
+		custom(m.abs(d.Path), d.CustomSections)
+	}
+	for _, s := range m.exp.Scenarios {
+		if ph := markerPlaceholder(s.Example); ph != "" {
+			out = append(out, newViolation(rule, m.abs(s.Path), fmt.Sprintf("_%s._ is not permitted for section Example", ph)))
+		}
+		custom(m.abs(s.Path), s.CustomSections)
+	}
+	if sm := m.exp.StateMachine; sm != nil {
+		check(m.abs("state-machine.md"), sm.Placeholders, nil, stateMachinePendingAllowed, nil)
+		custom(m.abs("state-machine.md"), sm.CustomSections)
 	}
 	return out
 }
@@ -305,6 +335,9 @@ func (m *specModel) pendingNotAllowed(rule types.Rule) []types.Violation {
 	}
 	for _, d := range m.exp.Decisions {
 		check(m.abs(d.Path), d.Placeholders)
+	}
+	if sm := m.exp.StateMachine; sm != nil {
+		check(m.abs("state-machine.md"), sm.Placeholders)
 	}
 	return out
 }
@@ -374,6 +407,37 @@ func headingAnchors(file string) map[string]bool {
 	return anchors
 }
 
+// existsExact reports whether p exists with exactly this spelling. Below root
+// every path element is compared case-sensitively against its directory
+// listing, so a link that only works on a case-insensitive filesystem is
+// reported on every platform.
+func existsExact(p, root string) bool {
+	if _, err := os.Stat(p); err != nil {
+		return false
+	}
+	cur := filepath.Clean(p)
+	root = filepath.Clean(root)
+	for strings.HasPrefix(cur, root+string(filepath.Separator)) {
+		parent := filepath.Dir(cur)
+		entries, err := os.ReadDir(parent)
+		if err != nil {
+			return true
+		}
+		found := false
+		for _, e := range entries {
+			if e.Name() == filepath.Base(cur) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+		cur = parent
+	}
+	return true
+}
+
 func (m *specModel) brokenLinks(rule types.Rule) []types.Violation {
 	var out []types.Violation
 	for _, f := range m.specFiles() {
@@ -392,7 +456,7 @@ func (m *specModel) brokenLinks(rule types.Rule) []types.Violation {
 			if parts[0] != "" {
 				absPath = filepath.Join(filepath.Dir(f), filepath.FromSlash(parts[0]))
 			}
-			if _, statErr := os.Stat(absPath); statErr != nil {
+			if !existsExact(absPath, m.dir) {
 				out = append(out, newViolation(rule, f, "broken link "+target))
 				continue
 			}
@@ -428,9 +492,12 @@ func typeParts(cell string) []string {
 	}
 }
 
+// externalNoted reports whether a description notes that a type is defined
+// elsewhere: it says so directly, or it names the spec that defines it.
 func externalNoted(description string) bool {
 	d := strings.ToLower(description)
-	return strings.Contains(d, "external") || strings.Contains(d, "another spec") || strings.Contains(d, "defined in")
+	return strings.Contains(d, "external") || strings.Contains(d, "another spec") ||
+		strings.Contains(d, "defined in") || strings.Contains(d, "spec")
 }
 
 func (m *specModel) undefinedTypes(rule types.Rule) []types.Violation {
@@ -741,6 +808,9 @@ func (m *specModel) scenarioRefs(rule types.Rule) []types.Violation {
 func (m *specModel) decisionContexts(rule types.Rule) []types.Violation {
 	var out []types.Violation
 	for _, d := range m.exp.Decisions {
+		if d.Placeholders["Context"] != "" {
+			continue // a pending Context is reported by the readiness rules
+		}
 		names := false
 		for _, t := range ticks(d.Context) {
 			if m.abilityNames[t] {
@@ -875,8 +945,13 @@ func (m *specModel) formatting(rule types.Rule) []types.Violation {
 				msg = "file must start with an H2 heading"
 			}
 		case "format.pipe-in-cell":
+			inFence := false
 			for _, line := range strings.Split(norm, "\n") {
-				if strings.HasPrefix(line, "|") && strings.Contains(line, `\|`) {
+				if format.IsFence(line) {
+					inFence = !inFence
+					continue
+				}
+				if !inFence && strings.HasPrefix(line, "|") && strings.Contains(line, `\|`) {
 					msg = "table cell contains an escaped pipe"
 					break
 				}

@@ -11,7 +11,7 @@ import (
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
-var aasddVersionRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*\s*(\S+)`)
+var aasddVersionRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*[ \t]*(\S*)`)
 
 // readAASDDVersion reads the **AASDD:** value from spec.md in the target
 // directory. Returns the latest version if spec.md is missing or unreadable,
@@ -22,7 +22,7 @@ func readAASDDVersion(target types.SpecTarget) string {
 		return load_rule_set.LatestVersion
 	}
 	m := aasddVersionRe.FindSubmatch(data)
-	if m == nil {
+	if m == nil || len(m[1]) == 0 {
 		return load_rule_set.LatestVersion
 	}
 	return string(m[1])

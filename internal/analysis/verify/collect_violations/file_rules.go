@@ -48,6 +48,7 @@ var delegatedExempt = map[string]bool{
 	"ability.missing-outputs":       true,
 	"ability.missing-invariants":    true,
 	"ability.missing-failure-modes": true,
+	"ability.table-columns":         true,
 }
 
 var (
@@ -56,16 +57,21 @@ var (
 	decisionSectionOrder     = []string{"Context", "Requirement", "Options", "Decision"}
 	scenarioSectionOrder     = []string{"Example"}
 	stateMachineSectionOrder = []string{"Orchestrator", "States", "Transitions", "Transition Rules", "Exceptional Flows"}
+
+	nameTypeDescription = []string{"Name", "Type", "Description"}
+	failureColumns      = []string{"Failure", "Condition", "Effect"}
+	valueMeaning        = []string{"Value", "Meaning"}
 )
 
 // sectionOrderMessage returns "" when the recognized sections among names
-// appear in the expected order with every custom section after them, and a
-// description of the first problem otherwise.
+// appear once each, in the expected order, with every custom section after
+// them, and a description of the first problem otherwise.
 func sectionOrderMessage(names, expected []string) string {
 	pos := make(map[string]int, len(expected))
 	for i, e := range expected {
 		pos[e] = i
 	}
+	seen := map[string]bool{}
 	last := -1
 	lastName := ""
 	customSeen := ""
@@ -75,6 +81,10 @@ func sectionOrderMessage(names, expected []string) string {
 			customSeen = n
 			continue
 		}
+		if seen[n] {
+			return fmt.Sprintf("section %s appears twice", n)
+		}
+		seen[n] = true
 		if customSeen != "" {
 			return fmt.Sprintf("section %s appears after custom section %s", n, customSeen)
 		}
@@ -99,7 +109,12 @@ func placeholderName(lines []string) string {
 	if len(nonEmpty) != 1 {
 		return ""
 	}
-	switch nonEmpty[0] {
+	return markerPlaceholder(nonEmpty[0])
+}
+
+// markerPlaceholder maps a marker line to its placeholder name, or "".
+func markerPlaceholder(line string) string {
+	switch strings.TrimSpace(line) {
 	case "_None._":
 		return types.PlaceholderNone
 	case "_Pending._":
@@ -110,6 +125,7 @@ func placeholderName(lines []string) string {
 	return ""
 }
 
+// tableHeaders returns the header cells of the first table in lines, or nil.
 func tableHeaders(lines []string) []string {
 	for _, l := range lines {
 		if strings.HasPrefix(strings.TrimSpace(l), "|") {
@@ -143,7 +159,7 @@ func hasLabel(lines []string, label string) bool {
 
 func hasFence(lines []string) bool {
 	for _, l := range lines {
-		if strings.HasPrefix(l, "```") {
+		if format.IsFence(l) {
 			return true
 		}
 	}
@@ -162,11 +178,28 @@ func stringsEqual(a, b []string) bool {
 	return true
 }
 
-// traceLineRe matches a scenario trace: backticked nodes joined by →, each
-// optionally followed by a divergence condition.
-var traceLineRe = regexp.MustCompile("^> `[^`]+`( — [A-Za-z][A-Za-z0-9]*)?( → `[^`]+`( — [A-Za-z][A-Za-z0-9]*)?)*$")
+// traceLineRe matches a scenario trace: backticked nodes joined by →, where a
+// divergence condition is always followed by the node that receives it.
+var traceLineRe = regexp.MustCompile("^> `[^`]+`(( — [A-Za-z][A-Za-z0-9]*)? → `[^`]+`)*$")
 
 var domainHeadingRe = regexp.MustCompile(`^## .+ domain$`)
+
+// columnsViolation checks the first table under a section against the expected
+// header cells. A section that is absent or a placeholder passes.
+func columnsViolation(rule types.Rule, path string, s *mdSection, expected []string) []types.Violation {
+	if s == nil || placeholderName(s.lines) != "" {
+		return nil
+	}
+	headers := tableHeaders(s.lines)
+	if headers == nil {
+		return []types.Violation{newViolation(rule, path, s.heading+" has no table")}
+	}
+	if !stringsEqual(headers, expected) {
+		return []types.Violation{newViolation(rule, path,
+			fmt.Sprintf("%s columns are %s; expected %s", s.heading, strings.Join(headers, " | "), strings.Join(expected, " | ")))}
+	}
+	return nil
+}
 
 // evaluateFileRuleV2 checks the file-level rules AASDD v2 adds.
 func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) []types.Violation {
@@ -196,19 +229,7 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 		return nil
 	}
 	columns := func(heading string, expected []string) []types.Violation {
-		s := find(heading)
-		if s == nil || placeholderName(s.lines) != "" {
-			return nil
-		}
-		headers := tableHeaders(s.lines)
-		if headers == nil {
-			return []types.Violation{newViolation(rule, path, heading+" has no table")}
-		}
-		if !stringsEqual(headers, expected) {
-			return []types.Violation{newViolation(rule, path,
-				fmt.Sprintf("%s columns are %s; expected %s", heading, strings.Join(headers, " | "), strings.Join(expected, " | ")))}
-		}
-		return nil
+		return columnsViolation(rule, path, find(heading), expected)
 	}
 
 	switch rule.ID {
@@ -225,6 +246,8 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 		return order(specSectionOrder)
 	case "spec.criteria-columns":
 		return columns("Success Criteria", []string{"Criterion", "Abilities", "Scenarios"})
+	case "spec.table-columns":
+		return columns("Failure Modes", failureColumns)
 
 	// ability.md
 	case "ability.missing-invariants":
@@ -238,6 +261,12 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 		return order(abilitySectionOrder)
 	case "ability.composition-columns":
 		return columns("Composition", []string{"Step", "Ability", "Consumes", "Produces"})
+	case "ability.table-columns":
+		var vs []types.Violation
+		vs = append(vs, columns("Inputs", nameTypeDescription)...)
+		vs = append(vs, columns("Outputs", nameTypeDescription)...)
+		vs = append(vs, columns("Failure Modes", failureColumns)...)
+		return vs
 	case "ability.delegated-extra-sections":
 		if isDelegated(content) && len(sections) > 0 {
 			return []types.Violation{newViolation(rule, path, "a delegated ability has no sections; found ### "+sections[0].heading)}
@@ -264,7 +293,7 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 		for _, line := range preamble {
 			if strings.HasPrefix(line, "> ") {
 				if !traceLineRe.MatchString(strings.TrimRight(line, " ")) {
-					return []types.Violation{newViolation(rule, path, "trace is not a sequence of backticked nodes: "+line)}
+					return []types.Violation{newViolation(rule, path, "trace is not a sequence of backticked nodes with a node after every condition: "+line)}
 				}
 				return nil
 			}
@@ -276,11 +305,33 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 			return []types.Violation{newViolation(rule, path, "concept.md must open with ## {DomainName} domain")}
 		}
 	case "concept.type-table":
+		// Sections without a table that follow the last table-bearing section
+		// are custom sections; every other section is a type and needs a table.
+		lastType := -1
+		for i, s := range sections {
+			if hasTableLine(s.lines) {
+				lastType = i
+			}
+		}
+		if lastType < 0 {
+			lastType = len(sections) - 1
+		}
 		var vs []types.Violation
-		for _, s := range sections {
-			if !hasTableLine(s.lines) {
+		for i, s := range sections {
+			if i <= lastType && !hasTableLine(s.lines) {
 				vs = append(vs, newViolation(rule, path, "type "+s.heading+" has no table"))
 			}
+		}
+		return vs
+	case "concept.table-columns":
+		var vs []types.Violation
+		for i := range sections {
+			headers := tableHeaders(sections[i].lines)
+			if headers == nil || stringsEqual(headers, nameTypeDescription) || stringsEqual(headers, valueMeaning) {
+				continue
+			}
+			vs = append(vs, newViolation(rule, path,
+				fmt.Sprintf("type %s has columns %s; expected Name | Type | Description or Value | Meaning", sections[i].heading, strings.Join(headers, " | "))))
 		}
 		return vs
 
@@ -297,6 +348,17 @@ func evaluateFileRuleV2(rule types.Rule, path, content string, ctx specContext) 
 		return missing("Transitions")
 	case "state-machine.section-order":
 		return order(stateMachineSectionOrder)
+	case "state-machine.table-columns":
+		var vs []types.Violation
+		vs = append(vs, columns("States", []string{"State", "Ability", "Description"})...)
+		vs = append(vs, columns("Transitions", []string{"From", "To", "Trigger", "Data Passed Forward"})...)
+		if o := find("Orchestrator"); o != nil && hasTableLine(o.lines) {
+			if headers := tableHeaders(o.lines); !stringsEqual(headers, nameTypeDescription) {
+				vs = append(vs, newViolation(rule, path,
+					fmt.Sprintf("Orchestrator-Managed State columns are %s; expected Name | Type | Description", strings.Join(headers, " | "))))
+			}
+		}
+		return vs
 	}
 	return nil
 }

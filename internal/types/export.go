@@ -121,6 +121,8 @@ type ParsedStateMachine struct {
 	Transitions       *Table            `json:"transitions"`
 	TransitionRules   []string          `json:"transition_rules,omitempty"`
 	ExceptionalFlows  []ExceptionalFlow `json:"exceptional_flows,omitempty"`
+	Placeholders      map[string]string `json:"placeholders,omitempty"`
+	CustomSections    []CustomSection   `json:"custom_sections,omitempty"`
 }
 
 // ExceptionalFlow is a named exceptional flow within a state machine.
