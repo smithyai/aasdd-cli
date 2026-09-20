@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
@@ -155,6 +156,9 @@ func TestScaffold_DefaultVersion_Succeeds(t *testing.T) {
 // --- WriteError ---
 
 func TestScaffold_WriteError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory permission bits are not enforced on Windows")
+	}
 	dir := t.TempDir()
 	// Make directory read-only so file creation fails.
 	if err := os.Chmod(dir, 0o555); err != nil {

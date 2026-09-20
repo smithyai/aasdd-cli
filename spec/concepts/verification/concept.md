@@ -13,16 +13,16 @@ Indicates whether a rule violation blocks conformance or is advisory only.
 
 ### Rule
 
-A single structural check derived from the AASDD conventions for a given spec version.
+A single structural check derived from the AASDD conventions and readiness conditions for a given methodology version.
 
 #### Properties
 
-| Name          | Type                  | Description                                                                                                   |
-| ------------- | --------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `id`          | text                  | Stable identifier for this rule (e.g., `"ability.missing-purpose"`).                                          |
-| `description` | text                  | Human-readable explanation of what this rule checks.                                                          |
-| `applies_to`  | text                  | The artifact filename this rule evaluates (e.g., `"ability.md"`, `"concept.md"`, `"spec.md"`, `"directory"`). |
-| `severity`    | [Severity](#severity) | Whether a violation of this rule is an error or a warning.                                                    |
+| Name          | Type                  | Description                                                                                                                                                                                                 |
+| ------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | text                  | Stable identifier for this rule (e.g., `"ability.missing-purpose"`).                                                                                                                                        |
+| `description` | text                  | Human-readable explanation of what this rule checks.                                                                                                                                                        |
+| `applies_to`  | text                  | The artifact filename this rule evaluates (e.g., `"ability.md"`, `"spec.md"`), `"directory"` for rules about the directory layout, or `"spec"` for rules evaluated once against the parsed spec as a whole. |
+| `severity`    | [Severity](#severity) | Whether a violation of this rule is an error or a warning.                                                                                                                                                  |
 
 ### RuleSet
 
@@ -32,7 +32,7 @@ The complete set of structural rules for a given AASDD version.
 
 | Name            | Type                  | Description                                                     |
 | --------------- | --------------------- | --------------------------------------------------------------- |
-| `aasdd_version` | text                  | The AASDD version these rules were derived from (e.g., `"v1"`). |
+| `aasdd_version` | text                  | The AASDD version these rules were derived from (e.g., `"v2"`). |
 | `rules`         | list of [Rule](#rule) | All structural rules to be evaluated.                           |
 
 ### VerificationResult
@@ -45,7 +45,7 @@ The outcome of verifying a spec directory.
 | ----------------- | ------------------------------------------ | ------------------------------------------------------------------------- |
 | `target`          | [SpecTarget](../cli/concept.md#spectarget) | The directory that was verified.                                          |
 | `aasdd_version`   | text                                       | The AASDD version used during verification.                               |
-| `rule_count`      | integer                                    | The number of rules evaluated.                                            |
+| `rule_count`      | number                                     | The number of rules evaluated.                                            |
 | `violations`      | list of [Violation](#violation)            | All structural violations found.                                          |
 | `passed`          | boolean                                    | `true` when there are no `Error`-severity violations.                     |
 | `spec_file_names` | list of text                               | Basenames of files that at least one rule applies to (e.g. `ability.md`). |

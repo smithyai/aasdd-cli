@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/analysis/verify"
+	"github.com/smithyai/aasdd-cli/internal/authoring/scaffold"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 

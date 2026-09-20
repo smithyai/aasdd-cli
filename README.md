@@ -8,7 +8,7 @@
 
 The official CLI for [Ability-Anchored Spec-Driven Development (AASDD)](https://github.com/smithyai/aasdd).
 
-`aasdd` provides commands for verifying, scaffolding, exporting, importing, diffing, and graphing AASDD specs. It is also self-hosted: this repository's own spec lives in [`spec/`](spec/) and is verified against the tool on every commit.
+`aasdd` provides commands for verifying, scaffolding, exporting, importing, diffing, and graphing AASDD specs. It understands methodology versions v1 and v2, and it is self-hosted: this repository's own spec lives in [`spec/`](spec/) and is verified against the tool on every commit.
 
 ## Installation
 
@@ -68,15 +68,20 @@ go install github.com/smithyai/aasdd-cli@latest
 
 ### `verify`
 
-Check a spec directory for conformance with AASDD structural conventions. Reports all violations with severity and location.
+Check a spec directory for conformance with the AASDD conventions and, once the spec is at `1.0.0` or above, the readiness conditions. The methodology version is read from the `**AASDD:**` label in `spec.md`; an unknown or missing label falls back to the latest version the tool knows. Every violation is reported with its rule, severity, file, and reason.
 
 ```sh
 aasdd verify ./spec
+
+# Show the rule count and the description of each violated rule
+aasdd verify --verbose ./spec
 ```
+
+For a v2 spec the rules cover the file templates and section order, placeholders (`_None._`, `_Pending._`, `_Open._`), folder names, relative links and type references, success criteria tracing, Composition tables, delegated abilities, scenario traces, the state machine, scenario coverage of failure modes and transitions at `1.0.0` and above, and canonical formatting (LF line endings, one final newline, padded tables). A draft below `1.0.0` may have pending sections and open decisions; a spec at `1.0.0` may not.
 
 ### `scaffold`
 
-Create a new spec directory populated with the correct structure and stub files.
+Create a new spec directory populated with the correct structure and stub files. A v2 scaffold is a conformant draft: every required section it cannot fill is `_Pending._`.
 
 ```sh
 # Minimal stubs
@@ -91,7 +96,7 @@ aasdd scaffold --aasdd-version v1 ./my-spec
 
 ### `diff`
 
-Compare two spec directories and report all structural differences.
+Compare two spec directories and report all structural differences. Comparison is structural: whitespace and table padding that do not change parsed content are ignored.
 
 ```sh
 aasdd diff ./spec-v1 ./spec-v2
@@ -99,30 +104,37 @@ aasdd diff ./spec-v1 ./spec-v2
 
 ### `export`
 
-Serialize a spec directory into a portable structured file.
+Serialize a spec directory into a portable JSON snapshot. Every construct is represented, including vision sections, placeholders, Composition, Idempotency, delegation fields, decision Options, and scenario Examples. Line endings are normalized on the way in.
 
 ```sh
-aasdd export ./spec -o spec.json
+# To stdout
+aasdd export ./spec
+
+# To a file
+aasdd export ./spec spec.json
 ```
 
 ### `import`
 
-Reconstruct a spec directory on disk from a previously exported snapshot.
+Reconstruct a spec directory on disk from a snapshot. Files are written in the canonical form: padded tables, LF line endings, folder names derived from headings. A spec that is already canonical round-trips byte for byte.
 
 ```sh
-aasdd import spec.json -o ./spec
+aasdd import spec.json ./spec
 ```
 
 ### `graph`
 
-Generate a dependency graph showing how abilities, concepts, decisions, and scenarios relate to each other.
+Generate a dependency graph showing how abilities relate to each other and to the concepts they consume and produce.
 
 ```sh
-# Default: Mermaid
+# Default: Mermaid to stdout
 aasdd graph ./spec
 
-# Output to file
-aasdd graph ./spec -o graph.mmd
+# Graphviz DOT, written to a file
+aasdd graph ./spec --format dot --output graph.dot
+
+# Add scenario, decision, and state machine nodes; limit depth; re-root at one ability
+aasdd graph ./spec --include scenarios,decisions,state-machine --depth 2 --root verify
 ```
 
 ### `list-versions`
@@ -168,6 +180,8 @@ make release-test    # simulate the CI release workflow via act
 make clean       # remove build artifacts and locally built Docker images
 ```
 
+Line endings are pinned to LF by `.gitattributes`; the verifier reports CRLF as a formatting error, so a checkout that converts line endings will fail its own self-test until the attributes are honoured.
+
 Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](.github/workflows/release.yml) handles all publishing — Homebrew, Scoop, deb/rpm/apk, and ghcr.io.
 
 ### Releasing a new version
@@ -176,8 +190,8 @@ Releases are triggered by pushing a `vX.Y.Z` tag. The [GitHub Actions workflow](
 2. Commit and push to `main`
 3. Tag the commit and push the tag:
    ```sh
-   git tag v0.2.0
-   git push origin v0.2.0
+   git tag v0.3.0
+   git push origin v0.3.0
    ```
 4. The release workflow will:
    - Validate the tag matches the spec version via [`smithyai/aasdd-release`](https://github.com/smithyai/aasdd-release)
@@ -200,7 +214,7 @@ Each publisher secret is optional — if a secret is missing or invalid, GoRelea
 
 ## Methodology
 
-This repository follows AASDD end-to-end. The spec in [`spec/`](spec/) defines the CLI's abilities, concepts, decisions, and scenarios. Implementation tracks the spec — if behavior exists in the code but not in the spec, the spec is incomplete. See the [AASDD methodology](https://github.com/smithyai/aasdd) for the full rule set.
+This repository follows AASDD end-to-end. The spec in [`spec/`](spec/) defines the CLI's abilities, concepts, decisions, and scenarios, written against AASDD v2. Implementation tracks the spec — if behavior exists in the code but not in the spec, the spec is incomplete. See the [AASDD methodology](https://github.com/smithyai/aasdd) for the full rule set.
 
 ## License
 

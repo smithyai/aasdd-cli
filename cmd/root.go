@@ -54,7 +54,7 @@ func buildVersionString() string {
 
 var rootCmd = &cobra.Command{
 	Use:     "aasdd",
-	Short:   "AASDD CLI — verify and scaffold AASDD specs",
+	Short:   "AASDD CLI — verify, scaffold, export, import, diff, and graph AASDD specs",
 	Version: buildVersionString(),
 }
 

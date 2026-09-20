@@ -78,7 +78,10 @@ func Diff(left, right types.SpecTarget) (types.DiffResult, error) {
 	// Compare spec.md
 	entries = append(entries, diffSpec(lSpec.ParsedSpecFile, rSpec.ParsedSpecFile)...)
 
-	// Compare abilities by path
+	// Compare the state machine
+	entries = append(entries, diffStateMachine(lSpec.StateMachine, rSpec.StateMachine)...)
+
+	// Compare abilities by path (sub-abilities included)
 	entries = append(entries, diffByPath("ability",
 		abilityMap(lSpec.Abilities), abilityMap(rSpec.Abilities),
 		func(l, r types.ParsedAbility) []types.DiffEntry { return diffAbility(l, r) },
@@ -150,10 +153,28 @@ func diffSpec(l, r types.ParsedSpecFile) []types.DiffEntry {
 		diffs = append(diffs, fmt.Sprintf("version: %q → %q", l.Version, r.Version))
 	}
 	if l.Summary != r.Summary {
-		diffs = append(diffs, fmt.Sprintf("summary changed"))
+		diffs = append(diffs, "summary changed")
+	}
+	if l.Purpose != r.Purpose {
+		diffs = append(diffs, "purpose changed")
+	}
+	if !slicesEqual(l.NonGoals, r.NonGoals) {
+		diffs = append(diffs, "non-goals changed")
+	}
+	if !tablesEqual(l.SuccessCriteria, r.SuccessCriteria) {
+		diffs = append(diffs, "success criteria changed")
 	}
 	if !slicesEqual(l.Invariants, r.Invariants) {
-		diffs = append(diffs, fmt.Sprintf("invariants changed"))
+		diffs = append(diffs, "invariants changed")
+	}
+	if !tablesEqual(l.FailureModes, r.FailureModes) {
+		diffs = append(diffs, "failure modes changed")
+	}
+	if !placeholdersEqual(l.Placeholders, r.Placeholders) {
+		diffs = append(diffs, "placeholders changed")
+	}
+	if !customSectionsEqual(l.CustomSections, r.CustomSections) {
+		diffs = append(diffs, "custom sections changed")
 	}
 	if len(diffs) == 0 {
 		return nil
@@ -167,16 +188,59 @@ func diffSpec(l, r types.ParsedSpecFile) []types.DiffEntry {
 	}}
 }
 
+// --- State machine comparison ---
+
+func diffStateMachine(l, r *types.ParsedStateMachine) []types.DiffEntry {
+	const path = "state-machine.md"
+	switch {
+	case l == nil && r == nil:
+		return nil
+	case l == nil:
+		return []types.DiffEntry{{Path: path, Kind: types.DiffAdded, Construct: "state-machine", Detail: "state machine added"}}
+	case r == nil:
+		return []types.DiffEntry{{Path: path, Kind: types.DiffRemoved, Construct: "state-machine", Detail: "state machine removed"}}
+	}
+	changed := l.Summary != r.Summary ||
+		l.Diagram != r.Diagram ||
+		l.Orchestrator != r.Orchestrator ||
+		!tablesEqual(l.OrchestratorState, r.OrchestratorState) ||
+		!tablesEqual(l.States, r.States) ||
+		!tablesEqual(l.Transitions, r.Transitions) ||
+		!slicesEqual(l.TransitionRules, r.TransitionRules) ||
+		!flowsEqual(l.ExceptionalFlows, r.ExceptionalFlows)
+	if !changed {
+		return nil
+	}
+	return []types.DiffEntry{{Path: path, Kind: types.DiffChanged, Construct: "state-machine", Detail: "state machine changed"}}
+}
+
+func flowsEqual(a, b []types.ExceptionalFlow) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Heading != b[i].Heading || a[i].Content != b[i].Content {
+			return false
+		}
+	}
+	return true
+}
+
 // --- Ability comparison ---
 
 func diffAbility(l, r types.ParsedAbility) []types.DiffEntry {
 	changed := l.Heading != r.Heading ||
 		l.Purpose != r.Purpose ||
+		l.Spec != r.Spec ||
+		l.SpecVersion != r.SpecVersion ||
 		l.OutputsNote != r.OutputsNote ||
+		l.Idempotency != r.Idempotency ||
 		!slicesEqual(l.Invariants, r.Invariants) ||
 		!tablesEqual(l.Inputs, r.Inputs) ||
 		!tablesEqual(l.Outputs, r.Outputs) ||
 		!tablesEqual(l.FailureModes, r.FailureModes) ||
+		!tablesEqual(l.Composition, r.Composition) ||
+		!placeholdersEqual(l.Placeholders, r.Placeholders) ||
 		!customSectionsEqual(l.CustomSections, r.CustomSections)
 	if !changed {
 		return nil
@@ -189,7 +253,7 @@ func diffAbility(l, r types.ParsedAbility) []types.DiffEntry {
 // --- Concept comparison ---
 
 func diffConcept(l, r types.ParsedConcept) []types.DiffEntry {
-	if l.Heading != r.Heading || l.Intro != r.Intro {
+	if l.Heading != r.Heading || l.Intro != r.Intro || !customSectionsEqual(l.CustomSections, r.CustomSections) {
 		return []types.DiffEntry{{
 			Path: l.Path, Kind: types.DiffChanged, Construct: "concept", Detail: "concept changed",
 		}}
@@ -220,32 +284,50 @@ func conceptTypesEqual(a, b types.ConceptType) bool {
 // --- Decision comparison ---
 
 func diffDecision(l, r types.ParsedDecision) []types.DiffEntry {
-	if l.Heading != r.Heading || l.Context != r.Context || l.Requirement != r.Requirement || l.Decision != r.Decision {
-		return []types.DiffEntry{{
-			Path: l.Path, Kind: types.DiffChanged, Construct: "decision", Detail: "decision changed",
-		}}
+	changed := l.Heading != r.Heading ||
+		l.Context != r.Context ||
+		l.Requirement != r.Requirement ||
+		l.Decision != r.Decision ||
+		!slicesEqual(l.Options, r.Options) ||
+		!placeholdersEqual(l.Placeholders, r.Placeholders) ||
+		!customSectionsEqual(l.CustomSections, r.CustomSections)
+	if !changed {
+		return nil
 	}
-	return nil
+	return []types.DiffEntry{{
+		Path: l.Path, Kind: types.DiffChanged, Construct: "decision", Detail: "decision changed",
+	}}
 }
 
 // --- Scenario comparison ---
 
 func diffScenario(l, r types.ParsedScenario) []types.DiffEntry {
-	if l.Heading != r.Heading || l.Description != r.Description || l.Trace != r.Trace || !slicesEqual(l.Assertions, r.Assertions) {
-		return []types.DiffEntry{{
-			Path: l.Path, Kind: types.DiffChanged, Construct: "scenario", Detail: "scenario changed",
-		}}
+	changed := l.Heading != r.Heading ||
+		l.Description != r.Description ||
+		l.Trace != r.Trace ||
+		l.Example != r.Example ||
+		!slicesEqual(l.Assertions, r.Assertions) ||
+		!customSectionsEqual(l.CustomSections, r.CustomSections)
+	if !changed {
+		return nil
 	}
-	return nil
+	return []types.DiffEntry{{
+		Path: l.Path, Kind: types.DiffChanged, Construct: "scenario", Detail: "scenario changed",
+	}}
 }
 
 // --- Helpers ---
 
 func abilityMap(abilities []types.ParsedAbility) map[string]types.ParsedAbility {
 	m := make(map[string]types.ParsedAbility, len(abilities))
-	for _, a := range abilities {
-		m[a.Path] = a
+	var add func(list []types.ParsedAbility)
+	add = func(list []types.ParsedAbility) {
+		for _, a := range list {
+			m[a.Path] = a
+			add(a.SubAbilities)
+		}
 	}
+	add(abilities)
 	return m
 }
 
@@ -279,6 +361,18 @@ func slicesEqual(a, b []string) bool {
 	}
 	for i := range a {
 		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func placeholdersEqual(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
 			return false
 		}
 	}

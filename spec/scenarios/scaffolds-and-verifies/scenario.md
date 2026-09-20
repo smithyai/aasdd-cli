@@ -1,4 +1,4 @@
-## ScaffoldsAndVerifies
+## Scaffolds and Verifies
 
 Scaffolding a new spec directory and immediately verifying it produces a conformant result.
 

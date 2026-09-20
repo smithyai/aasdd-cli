@@ -20,7 +20,9 @@ Creates a spec directory populated with the correct structure and stub files for
 
 - Every file in `result.files_created` exists on disk after the ability completes.
 - `result.files_created` is non-empty.
-- The generated `spec.md` records the AASDD version in its `**AASDD:**` label.
+- The generated `spec.md` records the AASDD version in its `**AASDD:**` label and a version below `1.0.0` in its `**Version:**` label.
+- Every required section the scaffold cannot fill contains `_Pending._`, so the scaffolded directory verifies as a conformant draft against the version it was scaffolded for.
+- The worked example verifies as conformant against the version it was scaffolded for.
 
 ### Failure Modes
 

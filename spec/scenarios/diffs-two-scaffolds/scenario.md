@@ -1,4 +1,4 @@
-## DiffsTwoScaffolds
+## Diffs Two Scaffolds
 
 Scaffolding a minimal spec and an example spec then diffing them reveals the additional constructs in the example.
 

@@ -1,5 +1,12 @@
 package types
 
+// Placeholder values recorded when a section carries a marker instead of content.
+const (
+	PlaceholderNone    = "None"    // the section was _None._
+	PlaceholderPending = "Pending" // the section was _Pending._
+	PlaceholderOpen    = "Open"    // the section was _Open._
+)
+
 // SpecExport is the top-level structured representation of a spec directory.
 type SpecExport struct {
 	ParsedSpecFile
@@ -19,12 +26,17 @@ type CustomSection struct {
 
 // ParsedSpecFile holds the structured content of a spec.md file.
 type ParsedSpecFile struct {
-	Heading        string          `json:"heading"`
-	AASDDVersion   string          `json:"aasdd"`
-	Version        string          `json:"version"`
-	Summary        string          `json:"summary"`
-	Invariants     []string        `json:"invariants,omitempty"`
-	CustomSections []CustomSection `json:"custom_sections,omitempty"`
+	Heading         string            `json:"heading"`
+	AASDDVersion    string            `json:"aasdd"`
+	Version         string            `json:"version"`
+	Summary         string            `json:"summary"`
+	Purpose         string            `json:"purpose,omitempty"`
+	NonGoals        []string          `json:"non_goals,omitempty"`
+	SuccessCriteria *Table            `json:"success_criteria,omitempty"`
+	Invariants      []string          `json:"invariants,omitempty"`
+	FailureModes    *Table            `json:"failure_modes,omitempty"`
+	Placeholders    map[string]string `json:"placeholders,omitempty"`
+	CustomSections  []CustomSection   `json:"custom_sections,omitempty"`
 }
 
 // Table is a parsed Markdown table with column order preserved.
@@ -35,17 +47,25 @@ type Table struct {
 
 // ParsedAbility holds the structured content of an ability.md file.
 type ParsedAbility struct {
-	Path           string          `json:"-"`
-	Heading        string          `json:"heading"`
-	Purpose        string          `json:"purpose,omitempty"`
-	Inputs         *Table          `json:"inputs,omitempty"`
-	Outputs        *Table          `json:"outputs,omitempty"`
-	OutputsNote    string          `json:"outputs_note,omitempty"`
-	Invariants     []string        `json:"invariants,omitempty"`
-	FailureModes   *Table          `json:"failure_modes,omitempty"`
-	CustomSections []CustomSection `json:"custom_sections,omitempty"`
-	SubAbilities   []ParsedAbility `json:"sub_abilities,omitempty"`
+	Path           string            `json:"-"`
+	Heading        string            `json:"heading"`
+	Purpose        string            `json:"purpose,omitempty"`
+	Spec           string            `json:"spec,omitempty"`
+	SpecVersion    string            `json:"spec_version,omitempty"`
+	Inputs         *Table            `json:"inputs,omitempty"`
+	Outputs        *Table            `json:"outputs,omitempty"`
+	OutputsNote    string            `json:"outputs_note,omitempty"`
+	Invariants     []string          `json:"invariants,omitempty"`
+	FailureModes   *Table            `json:"failure_modes,omitempty"`
+	Idempotency    string            `json:"idempotency,omitempty"`
+	Composition    *Table            `json:"composition,omitempty"`
+	Placeholders   map[string]string `json:"placeholders,omitempty"`
+	CustomSections []CustomSection   `json:"custom_sections,omitempty"`
+	SubAbilities   []ParsedAbility   `json:"sub_abilities,omitempty"`
 }
+
+// Delegated reports whether the ability is defined by another spec.
+func (a ParsedAbility) Delegated() bool { return a.Spec != "" }
 
 // ParsedConcept holds the structured content of a concept.md file.
 type ParsedConcept struct {
@@ -72,18 +92,24 @@ type ParsedScenario struct {
 	Description    string          `json:"description,omitempty"`
 	Trace          string          `json:"trace"`
 	Assertions     []string        `json:"assertions,omitempty"`
+	Example        string          `json:"example,omitempty"`
 	CustomSections []CustomSection `json:"custom_sections,omitempty"`
 }
 
 // ParsedDecision holds the structured content of a decision.md file.
 type ParsedDecision struct {
-	Path           string          `json:"-"`
-	Heading        string          `json:"heading"`
-	Context        string          `json:"context,omitempty"`
-	Requirement    string          `json:"requirement,omitempty"`
-	Decision       string          `json:"decision,omitempty"`
-	CustomSections []CustomSection `json:"custom_sections,omitempty"`
+	Path           string            `json:"-"`
+	Heading        string            `json:"heading"`
+	Context        string            `json:"context,omitempty"`
+	Requirement    string            `json:"requirement,omitempty"`
+	Options        []string          `json:"options,omitempty"`
+	Decision       string            `json:"decision,omitempty"`
+	Placeholders   map[string]string `json:"placeholders,omitempty"`
+	CustomSections []CustomSection   `json:"custom_sections,omitempty"`
 }
+
+// Open reports whether the decision has not been made yet.
+func (d ParsedDecision) Open() bool { return d.Placeholders["Decision"] == PlaceholderOpen }
 
 // ParsedStateMachine holds the structured content of a state-machine.md file.
 type ParsedStateMachine struct {

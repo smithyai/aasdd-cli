@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -70,6 +71,9 @@ func TestCollectViolations_TargetIsFile(t *testing.T) {
 }
 
 func TestCollectViolations_ReadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("file permission bits are not enforced on Windows")
+	}
 	dir := t.TempDir()
 	// Create spec.md so directory rule passes, then create an unreadable ability.md.
 	writeFile(t, filepath.Join(dir, "spec.md"), "**Version:** 0.1.0\n")
