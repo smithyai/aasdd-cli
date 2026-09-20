@@ -1,4 +1,4 @@
-## GraphsInDotFormat
+## Graphs in DOT Format
 
 Scaffolding an example spec and graphing it with DOT format produces valid Graphviz DOT source with the expected nodes and edges.
 

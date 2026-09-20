@@ -15,12 +15,13 @@ The output format for a rendered graph.
 
 The type of construct a graph node represents.
 
-| Value      | Meaning                        |
-| ---------- | ------------------------------ |
-| `Ability`  | A top-level or nested ability. |
-| `Concept`  | A concept type.                |
-| `Decision` | A decision.                    |
-| `Scenario` | A scenario.                    |
+| Value          | Meaning                        |
+| -------------- | ------------------------------ |
+| `Ability`      | A top-level or nested ability. |
+| `Concept`      | A concept type.                |
+| `Decision`     | A decision.                    |
+| `Scenario`     | A scenario.                    |
+| `StateMachine` | The state machine.             |
 
 ### GraphNode
 
@@ -57,5 +58,5 @@ The outcome of generating a spec dependency graph.
 | `target`     | [SpecTarget](../cli/concept.md#spectarget) | The spec directory that was graphed. |
 | `format`     | [GraphFormat](#graphformat)                | The output format used.              |
 | `content`    | text                                       | The rendered graph source.           |
-| `node_count` | integer                                    | Number of nodes in the graph.        |
-| `edge_count` | integer                                    | Number of edges in the graph.        |
+| `node_count` | number                                     | Number of nodes in the graph.        |
+| `edge_count` | number                                     | Number of edges in the graph.        |

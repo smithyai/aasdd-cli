@@ -1,4 +1,4 @@
-## ScaffoldsAndGraphs
+## Scaffolds and Graphs
 
 Scaffolding an example spec and graphing it produces a non-empty graph with the expected nodes and edges.
 

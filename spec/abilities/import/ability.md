@@ -18,8 +18,11 @@ Reconstructs a spec directory on disk from a previously exported snapshot.
 ### Invariants
 
 - `output` must be an empty directory or a nonexistent path.
-- Every parsed record in the export produces a Markdown file on disk at `output/<record.path>`.
-- A round-trip (`export` followed immediately by `import` into an empty directory) produces a directory that is structurally equivalent to the original: all spec files are present at the same relative paths, and the semantic content is identical.
+- Every parsed record in the export produces a Markdown file on disk under `output`.
+- Every directory name is derived from the heading of the file it holds by the naming rule in the conventions: words are lowercased and joined with hyphens, splitting PascalCase at each capital.
+- Every table is rendered in the canonical padded form, and every file ends with exactly one LF newline.
+- Sections are rendered in the order the file templates define, with placeholders rendered as the marker they were recorded from.
+- A round-trip (`export` followed immediately by `import` into an empty directory) of a spec in canonical form produces byte-identical files; for any spec it produces a directory that is structurally equivalent to the original.
 - When the export contains a `state_machine`, it is written to `state-machine.md` at the root of the output directory.
 - `result.file_count` equals the number of files written to disk.
 

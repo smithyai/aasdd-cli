@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -71,18 +72,43 @@ func Export(source, outputPath string, w io.Writer) (types.TransferResult, error
 	return types.TransferResult{FileCount: fileCount, OutputPath: outputPath}, nil
 }
 
+// NormalizeNewlines converts CRLF and bare CR line endings to LF.
+func NormalizeNewlines(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.ReplaceAll(s, "\r", "\n")
+}
+
+// readSpecFile reads a spec file and normalizes its line endings.
+func readSpecFile(path string) (string, bool) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", false
+	}
+	return NormalizeNewlines(string(data)), true
+}
+
+var aasddLabelRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*[ \t]*(\S*)`)
+
 // LoadSpec walks the source directory and returns a SpecExport plus a total file count.
+//
+// A spec written against AASDD v1 is parsed with v1 semantics: the sections v2
+// added (Purpose, Non-Goals, Success Criteria, Composition, Options) are custom
+// sections in a v1 spec and are preserved as such.
 func LoadSpec(source string) (types.SpecExport, int, error) {
 	exp := types.SpecExport{}
 	count := 0
+	legacy := false
 
-	if data, readErr := os.ReadFile(filepath.Join(source, "spec.md")); readErr == nil {
-		exp.ParsedSpecFile = parseSpecFile(string(data))
+	if content, ok := readSpecFile(filepath.Join(source, "spec.md")); ok {
+		if m := aasddLabelRe.FindStringSubmatch(content); m != nil && m[1] == "v1" {
+			legacy = true
+		}
+		exp.ParsedSpecFile = parseSpecFile(content, legacy)
 		count++
 	}
 
-	if data, readErr := os.ReadFile(filepath.Join(source, "state-machine.md")); readErr == nil {
-		sm := parseStateMachineFile(string(data))
+	if content, ok := readSpecFile(filepath.Join(source, "state-machine.md")); ok {
+		sm := parseStateMachineFile(content)
 		exp.StateMachine = &sm
 		count++
 	}
@@ -94,7 +120,7 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 			if !entry.IsDir() {
 				continue
 			}
-			ability, n, err := loadAbilityDir(source, "abilities/"+entry.Name())
+			ability, n, err := loadAbilityDir(source, "abilities/"+entry.Name(), legacy)
 			if err == nil {
 				exp.Abilities = append(exp.Abilities, ability)
 				count += n
@@ -110,8 +136,8 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 				continue
 			}
 			scenFile := filepath.Join(scenariosDir, entry.Name(), "scenario.md")
-			if sdata, readErr := os.ReadFile(scenFile); readErr == nil {
-				scenario := parseScenarioFile(string(sdata))
+			if content, ok := readSpecFile(scenFile); ok {
+				scenario := parseScenarioFile(content)
 				scenario.Path = "scenarios/" + entry.Name() + "/scenario.md"
 				exp.Scenarios = append(exp.Scenarios, scenario)
 				count++
@@ -127,8 +153,8 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 				continue
 			}
 			conceptFile := filepath.Join(conceptsDir, entry.Name(), "concept.md")
-			if data, readErr := os.ReadFile(conceptFile); readErr == nil {
-				concept := parseConceptFile(string(data))
+			if content, ok := readSpecFile(conceptFile); ok {
+				concept := parseConceptFile(content)
 				concept.Path = "concepts/" + entry.Name() + "/concept.md"
 				exp.Concepts = append(exp.Concepts, concept)
 				count++
@@ -144,8 +170,8 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 				continue
 			}
 			decisionFile := filepath.Join(decisionsDir, entry.Name(), "decision.md")
-			if data, readErr := os.ReadFile(decisionFile); readErr == nil {
-				decision := parseDecisionFile(string(data))
+			if content, ok := readSpecFile(decisionFile); ok {
+				decision := parseDecisionFile(content, legacy)
 				decision.Path = "decisions/" + entry.Name() + "/decision.md"
 				exp.Decisions = append(exp.Decisions, decision)
 				count++
@@ -158,13 +184,13 @@ func LoadSpec(source string) (types.SpecExport, int, error) {
 
 // loadAbilityDir loads ability.md from relDir (relative to source root),
 // and recursively loads sub-abilities.
-func loadAbilityDir(source, relDir string) (types.ParsedAbility, int, error) {
+func loadAbilityDir(source, relDir string, legacy bool) (types.ParsedAbility, int, error) {
 	absDir := filepath.Join(source, filepath.FromSlash(relDir))
-	data, err := os.ReadFile(filepath.Join(absDir, "ability.md"))
-	if err != nil {
-		return types.ParsedAbility{}, 0, err
+	content, ok := readSpecFile(filepath.Join(absDir, "ability.md"))
+	if !ok {
+		return types.ParsedAbility{}, 0, fmt.Errorf("ability.md not readable in %s", relDir)
 	}
-	ability := parseAbilityFile(string(data))
+	ability := parseAbilityFile(content, legacy)
 	ability.Path = relDir + "/ability.md"
 	count := 1
 
@@ -176,7 +202,7 @@ func loadAbilityDir(source, relDir string) (types.ParsedAbility, int, error) {
 			}
 			subRelDir := relDir + "/" + entry.Name()
 			if _, statErr := os.Stat(filepath.Join(absDir, entry.Name(), "ability.md")); statErr == nil {
-				sub, n, subErr := loadAbilityDir(source, subRelDir)
+				sub, n, subErr := loadAbilityDir(source, subRelDir, legacy)
 				if subErr == nil {
 					ability.SubAbilities = append(ability.SubAbilities, sub)
 					count += n
@@ -193,46 +219,6 @@ func sortEntries(entries []os.DirEntry) {
 }
 
 // --- Markdown parsers ---
-
-func parseSpecFile(content string) types.ParsedSpecFile {
-	var s types.ParsedSpecFile
-	section := ""
-	pastMeta := false
-	for _, line := range strings.Split(content, "\n") {
-		switch {
-		case strings.HasPrefix(line, "## "):
-			s.Heading = strings.TrimPrefix(line, "## ")
-		case strings.HasPrefix(line, "**AASDD:**"):
-			s.AASDDVersion = strings.TrimSpace(strings.TrimPrefix(line, "**AASDD:**"))
-		case strings.HasPrefix(line, "**Version:**"):
-			s.Version = strings.TrimSpace(strings.TrimPrefix(line, "**Version:**"))
-			pastMeta = true
-		case line == "### Invariants":
-			section = "invariants"
-		case strings.HasPrefix(line, "### "):
-			section = strings.TrimPrefix(line, "### ")
-		case section == "invariants" && strings.HasPrefix(line, "- "):
-			s.Invariants = append(s.Invariants, strings.TrimPrefix(line, "- "))
-		case section != "" && section != "invariants":
-			if len(s.CustomSections) > 0 && s.CustomSections[len(s.CustomSections)-1].Heading == section {
-				s.CustomSections[len(s.CustomSections)-1].Content += "\n" + line
-			} else {
-				s.CustomSections = append(s.CustomSections, types.CustomSection{Heading: section, Content: line})
-			}
-		case pastMeta && section == "" && strings.TrimSpace(line) != "":
-			if s.Summary != "" {
-				s.Summary += "\n" + line
-			} else {
-				s.Summary = line
-			}
-		}
-	}
-	s.Summary = strings.TrimSpace(s.Summary)
-	for i := range s.CustomSections {
-		s.CustomSections[i].Content = strings.TrimSpace(s.CustomSections[i].Content)
-	}
-	return s
-}
 
 // h3Section holds body lines under a single ### heading.
 type h3Section struct {
@@ -261,28 +247,157 @@ func splitH3(content string) (preamble []string, sections []h3Section) {
 	return
 }
 
-func parseAbilityFile(content string) types.ParsedAbility {
+// placeholderOf returns the placeholder a section body carries, or "" when the
+// body is content. A body is a placeholder when its only non-empty line is
+// exactly _None._, _Pending._, or _Open._.
+func placeholderOf(lines []string) string {
+	var nonEmpty []string
+	for _, l := range lines {
+		if t := strings.TrimSpace(l); t != "" {
+			nonEmpty = append(nonEmpty, t)
+		}
+	}
+	if len(nonEmpty) != 1 {
+		return ""
+	}
+	switch nonEmpty[0] {
+	case "_None._":
+		return types.PlaceholderNone
+	case "_Pending._":
+		return types.PlaceholderPending
+	case "_Open._":
+		return types.PlaceholderOpen
+	}
+	return ""
+}
+
+func setPlaceholder(m map[string]string, section, placeholder string) map[string]string {
+	if m == nil {
+		m = make(map[string]string)
+	}
+	m[section] = placeholder
+	return m
+}
+
+// hasContent reports whether any line is non-empty.
+func hasContent(lines []string) bool {
+	for _, l := range lines {
+		if strings.TrimSpace(l) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// hasTable reports whether the lines contain a Markdown table.
+func hasTable(lines []string) bool {
+	for _, l := range lines {
+		if strings.HasPrefix(strings.TrimSpace(l), "|") {
+			return true
+		}
+	}
+	return false
+}
+
+var specSections = map[string]bool{"Purpose": true, "Non-Goals": true, "Success Criteria": true, "Invariants": true, "Failure Modes": true}
+var abilitySections = map[string]bool{"Inputs": true, "Outputs": true, "Invariants": true, "Failure Modes": true, "Idempotency": true, "Composition": true}
+var decisionSections = map[string]bool{"Context": true, "Requirement": true, "Options": true, "Decision": true}
+var stateMachineSections = map[string]bool{"Orchestrator": true, "States": true, "Transitions": true, "Transition Rules": true, "Exceptional Flows": true}
+
+// v2-only section headings that a v1 spec may use as custom sections.
+var v2SpecSections = map[string]bool{"Purpose": true, "Non-Goals": true, "Success Criteria": true}
+
+func parseSpecFile(content string, legacy bool) types.ParsedSpecFile {
+	var s types.ParsedSpecFile
+	preamble, sections := splitH3(content)
+
+	var summaryLines []string
+	pastMeta := false
+	for _, line := range preamble {
+		switch {
+		case strings.HasPrefix(line, "## "):
+			s.Heading = strings.TrimPrefix(line, "## ")
+		case strings.HasPrefix(line, "**AASDD:**"):
+			s.AASDDVersion = strings.TrimSpace(strings.TrimPrefix(line, "**AASDD:**"))
+			pastMeta = true
+		case strings.HasPrefix(line, "**Version:**"):
+			s.Version = strings.TrimSpace(strings.TrimPrefix(line, "**Version:**"))
+			pastMeta = true
+		case pastMeta && strings.TrimSpace(line) != "":
+			summaryLines = append(summaryLines, line)
+		}
+	}
+	s.Summary = strings.TrimSpace(strings.Join(summaryLines, "\n"))
+
+	for _, sec := range sections {
+		if legacy && v2SpecSections[sec.heading] {
+			s.CustomSections = append(s.CustomSections, customSection(sec))
+			continue
+		}
+		if ph := placeholderOf(sec.lines); ph != "" && specSections[sec.heading] {
+			s.Placeholders = setPlaceholder(s.Placeholders, sec.heading, ph)
+			continue
+		}
+		switch sec.heading {
+		case "Purpose":
+			s.Purpose = trimmedText(sec.lines)
+		case "Non-Goals":
+			if bullets := extractBullets(sec.lines); len(bullets) > 0 || !hasContent(sec.lines) {
+				s.NonGoals = bullets
+			} else {
+				s.CustomSections = append(s.CustomSections, customSection(sec))
+			}
+		case "Success Criteria":
+			if t := parseTable(sec.lines); t != nil || !hasContent(sec.lines) {
+				s.SuccessCriteria = t
+			} else {
+				s.CustomSections = append(s.CustomSections, customSection(sec))
+			}
+		case "Invariants":
+			s.Invariants = extractBullets(sec.lines)
+		case "Failure Modes":
+			if t := parseTable(sec.lines); t != nil || !hasContent(sec.lines) {
+				s.FailureModes = t
+			} else {
+				s.CustomSections = append(s.CustomSections, customSection(sec))
+			}
+		default:
+			s.CustomSections = append(s.CustomSections, customSection(sec))
+		}
+	}
+	return s
+}
+
+func parseAbilityFile(content string, legacy bool) types.ParsedAbility {
 	var a types.ParsedAbility
 	preamble, sections := splitH3(content)
 
-	purposeIdx := -1
-	for i, line := range preamble {
-		if strings.HasPrefix(line, "## ") {
+	var purposeLines []string
+	pastHeading := false
+	for _, line := range preamble {
+		switch {
+		case strings.HasPrefix(line, "## "):
 			a.Heading = strings.TrimPrefix(line, "## ")
-			purposeIdx = i + 1
+			pastHeading = true
+		case strings.HasPrefix(line, "**Spec:**"):
+			a.Spec = strings.TrimSpace(strings.TrimPrefix(line, "**Spec:**"))
+		case strings.HasPrefix(line, "**Version:**"):
+			a.SpecVersion = strings.TrimSpace(strings.TrimPrefix(line, "**Version:**"))
+		case pastHeading && strings.TrimSpace(line) != "":
+			purposeLines = append(purposeLines, line)
 		}
 	}
-	if purposeIdx >= 0 {
-		var parts []string
-		for _, line := range preamble[purposeIdx:] {
-			if strings.TrimSpace(line) != "" {
-				parts = append(parts, line)
-			}
-		}
-		a.Purpose = strings.TrimSpace(strings.Join(parts, "\n"))
-	}
+	a.Purpose = strings.TrimSpace(strings.Join(purposeLines, "\n"))
 
 	for _, sec := range sections {
+		if legacy && sec.heading == "Composition" {
+			a.CustomSections = append(a.CustomSections, customSection(sec))
+			continue
+		}
+		if ph := placeholderOf(sec.lines); ph != "" && abilitySections[sec.heading] {
+			a.Placeholders = setPlaceholder(a.Placeholders, sec.heading, ph)
+			continue
+		}
 		switch sec.heading {
 		case "Inputs":
 			a.Inputs = parseTable(sec.lines)
@@ -293,6 +408,14 @@ func parseAbilityFile(content string) types.ParsedAbility {
 			a.Invariants = extractBullets(sec.lines)
 		case "Failure Modes":
 			a.FailureModes = parseTable(sec.lines)
+		case "Idempotency":
+			a.Idempotency = trimmedText(sec.lines)
+		case "Composition":
+			if t := parseTable(sec.lines); t != nil || !hasContent(sec.lines) {
+				a.Composition = t
+			} else {
+				a.CustomSections = append(a.CustomSections, customSection(sec))
+			}
 		default:
 			a.CustomSections = append(a.CustomSections, customSection(sec))
 		}
@@ -300,6 +423,9 @@ func parseAbilityFile(content string) types.ParsedAbility {
 	return a
 }
 
+// parseConceptFile parses a concept.md file. Every ### section up to and
+// including the last one that carries a table is a type; sections without a
+// table that follow the last type are custom sections.
 func parseConceptFile(content string) types.ParsedConcept {
 	var c types.ParsedConcept
 	preamble, sections := splitH3(content)
@@ -314,8 +440,21 @@ func parseConceptFile(content string) types.ParsedConcept {
 	}
 	c.Intro = strings.TrimSpace(strings.Join(introLines, "\n"))
 
-	for _, sec := range sections {
-		c.Types = append(c.Types, parseConceptType(sec.heading, sec.lines))
+	lastType := -1
+	for i, sec := range sections {
+		if hasTable(sec.lines) {
+			lastType = i
+		}
+	}
+	if lastType < 0 {
+		lastType = len(sections) - 1
+	}
+	for i, sec := range sections {
+		if i <= lastType {
+			c.Types = append(c.Types, parseConceptType(sec.heading, sec.lines))
+		} else {
+			c.CustomSections = append(c.CustomSections, customSection(sec))
+		}
 	}
 	return c
 }
@@ -368,17 +507,23 @@ func parseConceptType(name string, lines []string) types.ConceptType {
 	return ct
 }
 
+// traceRe matches a trace line: backticked nodes joined by →, each optionally
+// followed by a divergence condition that is itself followed by a node.
+var traceRe = regexp.MustCompile("^> `[^`]+`(( — [^→`]+)? → `[^`]+`)*$")
+
 func parseScenarioFile(content string) types.ParsedScenario {
 	var s types.ParsedScenario
+	preamble, sections := splitH3(content)
+
 	var descLines []string
 	pastHeading := false
-	for _, line := range strings.Split(content, "\n") {
+	for _, line := range preamble {
 		trimmed := strings.TrimSpace(line)
 		switch {
 		case strings.HasPrefix(line, "## "):
 			s.Heading = strings.TrimPrefix(line, "## ")
 			pastHeading = true
-		case strings.HasPrefix(trimmed, "> `") && strings.HasSuffix(trimmed, "`"):
+		case s.Trace == "" && traceRe.MatchString(trimmed):
 			s.Trace = strings.Trim(strings.TrimPrefix(trimmed, ">"), " `")
 		case strings.HasPrefix(line, "- "):
 			s.Assertions = append(s.Assertions, strings.TrimPrefix(line, "- "))
@@ -387,10 +532,19 @@ func parseScenarioFile(content string) types.ParsedScenario {
 		}
 	}
 	s.Description = strings.TrimSpace(strings.Join(descLines, "\n"))
+
+	for _, sec := range sections {
+		switch sec.heading {
+		case "Example":
+			s.Example = trimmedText(sec.lines)
+		default:
+			s.CustomSections = append(s.CustomSections, customSection(sec))
+		}
+	}
 	return s
 }
 
-func parseDecisionFile(content string) types.ParsedDecision {
+func parseDecisionFile(content string, legacy bool) types.ParsedDecision {
 	var d types.ParsedDecision
 	preamble, sections := splitH3(content)
 	for _, line := range preamble {
@@ -399,14 +553,27 @@ func parseDecisionFile(content string) types.ParsedDecision {
 		}
 	}
 	for _, sec := range sections {
-		text := strings.TrimSpace(strings.Join(sec.lines, "\n"))
+		if legacy && sec.heading == "Options" {
+			d.CustomSections = append(d.CustomSections, customSection(sec))
+			continue
+		}
+		if ph := placeholderOf(sec.lines); ph != "" && decisionSections[sec.heading] {
+			d.Placeholders = setPlaceholder(d.Placeholders, sec.heading, ph)
+			continue
+		}
 		switch sec.heading {
 		case "Context":
-			d.Context = text
+			d.Context = trimmedText(sec.lines)
 		case "Requirement":
-			d.Requirement = text
+			d.Requirement = trimmedText(sec.lines)
+		case "Options":
+			if bullets := extractBullets(sec.lines); len(bullets) > 0 || !hasContent(sec.lines) {
+				d.Options = bullets
+			} else {
+				d.CustomSections = append(d.CustomSections, customSection(sec))
+			}
 		case "Decision":
-			d.Decision = text
+			d.Decision = trimmedText(sec.lines)
 		default:
 			d.CustomSections = append(d.CustomSections, customSection(sec))
 		}
@@ -454,10 +621,14 @@ func extractBullets(lines []string) []string {
 	return out
 }
 
+func trimmedText(lines []string) string {
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
 func customSection(sec h3Section) types.CustomSection {
 	return types.CustomSection{
 		Heading: sec.heading,
-		Content: strings.TrimSpace(strings.Join(sec.lines, "\n")),
+		Content: trimmedText(sec.lines),
 	}
 }
 
@@ -492,7 +663,7 @@ func parseStateMachineFile(content string) types.ParsedStateMachine {
 		if !pastHeading {
 			continue
 		}
-		if strings.HasPrefix(line, "```mermaid") {
+		if strings.HasPrefix(line, "```") && !inDiagram {
 			inDiagram = true
 			diagramLines = append(diagramLines, line)
 			continue
@@ -510,6 +681,10 @@ func parseStateMachineFile(content string) types.ParsedStateMachine {
 	sm.Diagram = strings.TrimSpace(strings.Join(diagramLines, "\n"))
 
 	for _, sec := range sections {
+		if ph := placeholderOf(sec.lines); ph != "" && stateMachineSections[sec.heading] {
+			sm.Placeholders = setPlaceholder(sm.Placeholders, sec.heading, ph)
+			continue
+		}
 		switch sec.heading {
 		case "Orchestrator":
 			sm.Orchestrator, sm.OrchestratorState = parseOrchestratorSection(sec.lines)
@@ -521,6 +696,8 @@ func parseStateMachineFile(content string) types.ParsedStateMachine {
 			sm.TransitionRules = extractBullets(sec.lines)
 		case "Exceptional Flows":
 			sm.ExceptionalFlows = parseExceptionalFlows(sec.lines)
+		default:
+			sm.CustomSections = append(sm.CustomSections, customSection(sec))
 		}
 	}
 	return sm

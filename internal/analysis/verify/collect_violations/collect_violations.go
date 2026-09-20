@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/smithyai/aasdd-cli/internal/transfer/export"
 	"github.com/smithyai/aasdd-cli/internal/types"
 )
 
@@ -44,6 +45,32 @@ func (e *ReadError) Error() string {
 
 func (e *ReadError) Unwrap() error { return e.Err }
 
+// specContext carries spec-wide facts that individual rules depend on.
+type specContext struct {
+	version string // the **Version:** label of spec.md, or "" when absent
+	ready   bool   // true when the version is 1.0.0 or above
+}
+
+// readSpecContext reads the spec version from spec.md. A missing or unparseable
+// version yields a draft context, so readiness rules stay silent.
+func readSpecContext(dir string) specContext {
+	data, err := os.ReadFile(filepath.Join(dir, "spec.md"))
+	if err != nil {
+		return specContext{}
+	}
+	m := versionLineRe.FindStringSubmatch(export.NormalizeNewlines(string(data)))
+	if m == nil {
+		return specContext{}
+	}
+	return specContext{version: m[1], ready: isReadyVersion(m[1])}
+}
+
+// isReadyVersion reports whether a semver string is 1.0.0 or above.
+func isReadyVersion(v string) bool {
+	m := semverRe.FindStringSubmatch(v)
+	return m != nil && m[1] != "0"
+}
+
 // CollectViolations applies a rule set to a spec directory and returns all
 // violations found. When progress is true, "ok  <relpath>" is written to
 // stderr for each validated path.
@@ -56,15 +83,20 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress 
 		return types.VerificationResult{}, &TargetIsFile{Path: target.Path}
 	}
 
-	// Separate directory-level rules from file rules.
-	var dirRules, fileRules []types.Rule
+	// Separate directory-level rules, spec-wide rules, and file rules.
+	var dirRules, fileRules, specRules []types.Rule
 	for _, r := range ruleSet.Rules {
-		if r.AppliesTo == "directory" {
+		switch r.AppliesTo {
+		case "directory":
 			dirRules = append(dirRules, r)
-		} else {
+		case "spec":
+			specRules = append(specRules, r)
+		default:
 			fileRules = append(fileRules, r)
 		}
 	}
+
+	ctx := readSpecContext(target.Path)
 
 	var violations []types.Violation
 
@@ -87,16 +119,22 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress 
 		}
 		name := filepath.Base(path)
 		matched := false
+		content := ""
+		loaded := false
 		for _, r := range fileRules {
 			if name != r.AppliesTo {
 				continue
 			}
 			matched = true
-			content, readErr := os.ReadFile(path)
-			if readErr != nil {
-				return &ReadError{Path: path, Err: readErr}
+			if !loaded {
+				data, readErr := os.ReadFile(path)
+				if readErr != nil {
+					return &ReadError{Path: path, Err: readErr}
+				}
+				content = export.NormalizeNewlines(string(data))
+				loaded = true
 			}
-			vs := evaluateFileRule(r, path, string(content))
+			vs := evaluateFileRule(r, path, content, ctx)
 			violations = append(violations, vs...)
 		}
 		if matched && progress {
@@ -107,6 +145,15 @@ func CollectViolations(target types.SpecTarget, ruleSet types.RuleSet, progress 
 	})
 	if err != nil {
 		return types.VerificationResult{}, err
+	}
+
+	// Evaluate spec-wide rules against the parsed spec.
+	if len(specRules) > 0 {
+		exp, _, loadErr := export.LoadSpec(target.Path)
+		if loadErr != nil {
+			return types.VerificationResult{}, &ReadError{Path: target.Path, Err: loadErr}
+		}
+		violations = append(violations, evaluateSpecRules(specRules, target.Path, exp, ctx)...)
 	}
 
 	// Invariant: result.passed iff no Error-severity violations.
@@ -167,55 +214,25 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 	case "directory.missing-spec":
 		specPath := filepath.Join(dir, "spec.md")
 		if _, err := os.Stat(specPath); err != nil {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        dir,
-				Message:     "spec.md not found in root directory",
-			}}
+			return []types.Violation{newViolation(rule, dir, "spec.md not found in root directory")}
 		}
 	case "directory.missing-abilities":
 		subdir := filepath.Join(dir, "abilities")
 		info, err := os.Stat(subdir)
 		if err != nil {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        dir,
-				Message:     "abilities/ directory not found in root",
-			}}
+			return []types.Violation{newViolation(rule, dir, "abilities/ directory not found in root")}
 		}
 		if !info.IsDir() {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        subdir,
-				Message:     "abilities exists but is not a directory",
-			}}
+			return []types.Violation{newViolation(rule, subdir, "abilities exists but is not a directory")}
 		}
 	case "directory.missing-concepts":
 		subdir := filepath.Join(dir, "concepts")
 		info, err := os.Stat(subdir)
 		if err != nil {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        dir,
-				Message:     "concepts/ directory not found in root",
-			}}
+			return []types.Violation{newViolation(rule, dir, "concepts/ directory not found in root")}
 		}
 		if !info.IsDir() {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        subdir,
-				Message:     "concepts exists but is not a directory",
-			}}
+			return []types.Violation{newViolation(rule, subdir, "concepts exists but is not a directory")}
 		}
 	case "abilities.empty":
 		abilitiesDir := filepath.Join(dir, "abilities")
@@ -228,13 +245,7 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 				return nil
 			}
 		}
-		return []types.Violation{{
-			Rule:        rule.ID,
-			Severity:    rule.Severity,
-			Description: rule.Description,
-			Path:        abilitiesDir,
-			Message:     "abilities/ contains no ability subdirectories",
-		}}
+		return []types.Violation{newViolation(rule, abilitiesDir, "abilities/ contains no ability subdirectories")}
 	case "ability.missing-ability-md":
 		abilitiesDir := filepath.Join(dir, "abilities")
 		entries, err := os.ReadDir(abilitiesDir)
@@ -248,13 +259,7 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 			}
 			abilityPath := filepath.Join(abilitiesDir, e.Name())
 			if _, statErr := os.Stat(filepath.Join(abilityPath, "ability.md")); statErr != nil {
-				vs = append(vs, types.Violation{
-					Rule:        rule.ID,
-					Severity:    rule.Severity,
-					Description: rule.Description,
-					Path:        abilityPath,
-					Message:     "ability directory is missing ability.md",
-				})
+				vs = append(vs, newViolation(rule, abilityPath, "ability directory is missing ability.md"))
 			}
 		}
 		return vs
@@ -269,13 +274,7 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 				return nil
 			}
 		}
-		return []types.Violation{{
-			Rule:        rule.ID,
-			Severity:    rule.Severity,
-			Description: rule.Description,
-			Path:        conceptsDir,
-			Message:     "concepts/ contains no concept domain subdirectories",
-		}}
+		return []types.Violation{newViolation(rule, conceptsDir, "concepts/ contains no concept domain subdirectories")}
 	case "concept.missing-concept-md":
 		conceptsDir := filepath.Join(dir, "concepts")
 		entries, err := os.ReadDir(conceptsDir)
@@ -289,13 +288,7 @@ func evaluateDirectoryRule(rule types.Rule, dir string) []types.Violation {
 			}
 			conceptPath := filepath.Join(conceptsDir, e.Name())
 			if _, statErr := os.Stat(filepath.Join(conceptPath, "concept.md")); statErr != nil {
-				vs = append(vs, types.Violation{
-					Rule:        rule.ID,
-					Severity:    rule.Severity,
-					Description: rule.Description,
-					Path:        conceptPath,
-					Message:     "concept domain directory is missing concept.md",
-				})
+				vs = append(vs, newViolation(rule, conceptPath, "concept domain directory is missing concept.md"))
 			}
 		}
 		return vs
@@ -309,17 +302,23 @@ var semverRe = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
 	`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
 	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
-// versionLineRe extracts the value after **Version:**
-var versionLineRe = regexp.MustCompile(`(?m)^\*\*Version:\*\*\s*(\S+)`)
+// versionLineRe extracts the value after **Version:** on the same line; an
+// empty value captures "" rather than the next line's first word.
+var versionLineRe = regexp.MustCompile(`(?m)^\*\*Version:\*\*[ \t]*(\S*)`)
 
-// aasddVersionLineRe extracts the value after **AASDD:**
-var aasddVersionLineRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*\s*(\S+)`)
+// aasddVersionLineRe extracts the value after **AASDD:** on the same line.
+var aasddVersionLineRe = regexp.MustCompile(`(?m)^\*\*AASDD:\*\*[ \t]*(\S*)`)
 
 // aasddVersionRe matches a valid AASDD version: v followed by a positive integer with no leading zeros.
 var aasddVersionRe = regexp.MustCompile(`^v[1-9][0-9]*$`)
 
-// evaluateFileRule checks content-based rules for a single file.
-func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
+// evaluateFileRule checks content-based rules for a single file. Content has
+// normalized line endings.
+func evaluateFileRule(rule types.Rule, path, content string, ctx specContext) []types.Violation {
+	if delegatedExempt[rule.ID] && isDelegated(content) {
+		return nil
+	}
+
 	checks := map[string]string{
 		"spec.missing-version":         "**Version:**",
 		"spec.missing-aasdd-version":   "**AASDD:**",
@@ -334,13 +333,7 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 
 	if needle, ok := checks[rule.ID]; ok {
 		if !strings.Contains(content, needle) {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        path,
-				Message:     fmt.Sprintf("required content missing: %s", needle),
-			}}
+			return []types.Violation{newViolation(rule, path, fmt.Sprintf("required content missing: %s", needle))}
 		}
 		return nil
 	}
@@ -349,26 +342,17 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 	switch rule.ID {
 	case "spec.missing-summary":
 		if !hasPreambleParagraph(content, "**Version:**") {
-			return []types.Violation{{
-				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
-				Path: path, Message: "spec.md must have a summary paragraph after the version metadata",
-			}}
+			return []types.Violation{newViolation(rule, path, "spec.md must have a summary paragraph after the version metadata")}
 		}
 		return nil
 	case "ability.missing-purpose":
 		if !hasPreambleParagraph(content, "## ") {
-			return []types.Violation{{
-				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
-				Path: path, Message: "ability.md must have a purpose paragraph after the heading",
-			}}
+			return []types.Violation{newViolation(rule, path, "ability.md must have a purpose paragraph after the heading")}
 		}
 		return nil
 	case "scenario.missing-description":
 		if !hasPreambleParagraph(content, "## ") {
-			return []types.Violation{{
-				Rule: rule.ID, Severity: rule.Severity, Description: rule.Description,
-				Path: path, Message: "scenario.md must have a description paragraph after the heading",
-			}}
+			return []types.Violation{newViolation(rule, path, "scenario.md must have a description paragraph after the heading")}
 		}
 		return nil
 	}
@@ -382,13 +366,8 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 			value = m[1]
 		}
 		if !semverRe.MatchString(value) || strings.HasPrefix(value, "v") {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        path,
-				Message:     fmt.Sprintf("**Version:** value %q is not valid semver (expected MAJOR.MINOR.PATCH, no 'v' prefix)", value),
-			}}
+			return []types.Violation{newViolation(rule, path,
+				fmt.Sprintf("**Version:** value %q is not valid semver (expected MAJOR.MINOR.PATCH, no 'v' prefix)", value))}
 		}
 		return nil
 	}
@@ -400,18 +379,13 @@ func evaluateFileRule(rule types.Rule, path, content string) []types.Violation {
 			value = m[1]
 		}
 		if !aasddVersionRe.MatchString(value) {
-			return []types.Violation{{
-				Rule:        rule.ID,
-				Severity:    rule.Severity,
-				Description: rule.Description,
-				Path:        path,
-				Message:     fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, …)", value),
-			}}
+			return []types.Violation{newViolation(rule, path,
+				fmt.Sprintf("**AASDD:** value %q is not a valid AASDD version (expected v1, …)", value))}
 		}
 		return nil
 	}
 
-	return nil
+	return evaluateFileRuleV2(rule, path, content, ctx)
 }
 
 // hasPreambleParagraph checks whether non-empty text exists between the line
@@ -436,4 +410,15 @@ func hasPreambleParagraph(content, anchor string) bool {
 		}
 	}
 	return false
+}
+
+// newViolation builds a violation for rule at path.
+func newViolation(rule types.Rule, path, message string) types.Violation {
+	return types.Violation{
+		Rule:        rule.ID,
+		Severity:    rule.Severity,
+		Description: rule.Description,
+		Path:        path,
+		Message:     message,
+	}
 }

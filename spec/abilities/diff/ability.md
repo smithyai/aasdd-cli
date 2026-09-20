@@ -18,6 +18,7 @@ Compares two spec directories and reports all structural differences between the
 ### Invariants
 
 - Both `left` and `right` are parsed into their structured representations before comparison.
+- Every field of the structured representation is compared, including the vision sections of `spec.md`, Composition, Idempotency, Options, Example, delegation fields, placeholders, and custom sections.
 - `result.changed` is `true` if and only if `result.entries` is non-empty.
 - Every entry in `result.entries` references a path that exists in at least one of the two specs.
 - Comparison is structural, not textual — whitespace and formatting differences that do not change parsed content are ignored.

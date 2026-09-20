@@ -1,4 +1,4 @@
-## ScaffoldsExampleAndVerifies
+## Scaffolds Example and Verifies
 
 Scaffolding a worked-example spec directory and immediately verifying it produces a conformant result.
 
